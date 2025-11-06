@@ -20,7 +20,7 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
-  const [role, setRole] = useState<"youth" | "vendor" | "ngo">("youth");
+  const [role, setRole] = useState<"user" | "vendor" | "ngo">("user");
 
   // Role-specific info
   const [businessName, setBusinessName] = useState("");
@@ -57,10 +57,10 @@ const Signup = () => {
         // Assign role
         const { error: roleError } = await supabase
           .from("user_roles")
-          .insert({
+          .insert([{
             user_id: authData.user.id,
             role: role,
-          });
+          }]);
 
         if (roleError) throw roleError;
 
@@ -124,12 +124,12 @@ const Signup = () => {
                   <Label>Select Your Role</Label>
                   <RadioGroup value={role} onValueChange={(value: any) => setRole(value)}>
                     <div className="flex items-center space-x-3 border rounded-lg p-4 cursor-pointer hover:border-primary">
-                      <RadioGroupItem value="youth" id="youth" />
-                      <Label htmlFor="youth" className="flex items-center gap-3 cursor-pointer flex-1">
+                      <RadioGroupItem value="user" id="user" />
+                      <Label htmlFor="user" className="flex items-center gap-3 cursor-pointer flex-1">
                         <Users className="h-5 w-5 text-primary" />
                         <div>
-                          <div className="font-medium">Youth User</div>
-                          <div className="text-sm text-muted-foreground">Looking for jobs, gigs, and events</div>
+                          <div className="font-medium">User</div>
+                          <div className="text-sm text-muted-foreground">Looking for jobs, services, and events</div>
                         </div>
                       </Label>
                     </div>
@@ -138,7 +138,7 @@ const Signup = () => {
                       <Label htmlFor="vendor" className="flex items-center gap-3 cursor-pointer flex-1">
                         <Briefcase className="h-5 w-5 text-secondary" />
                         <div>
-                          <div className="font-medium">MSME / Vendor</div>
+                          <div className="font-medium">MSME & Vendor</div>
                           <div className="text-sm text-muted-foreground">Offering services and products</div>
                         </div>
                       </Label>
@@ -279,7 +279,7 @@ const Signup = () => {
                   </div>
                 )}
 
-                {role === "youth" && (
+                {role === "user" && (
                   <div className="text-center py-8">
                     <p className="text-muted-foreground">You're all set! Click below to create your account.</p>
                   </div>
