@@ -16,7 +16,7 @@ const Index = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button asChild size="lg" variant="secondary" className="text-lg">
-                <Link to="/signup">
+                <Link to="/role-selection">
                   Get Started Free <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
@@ -152,7 +152,7 @@ const Index = () => {
           <h2 className="text-4xl md:text-5xl font-bold mb-6">Ready to Connect?</h2>
           <p className="text-lg md:text-xl mb-8 opacity-95 max-w-2xl mx-auto">Join thousands of users, businesses, and organizations building a connected Africa</p>
           <Button asChild size="lg" variant="secondary" className="text-lg">
-            <Link to="/signup">
+            <Link to="/role-selection">
               Create Free Account <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
