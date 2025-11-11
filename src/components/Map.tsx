@@ -1,6 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -9,35 +7,82 @@ interface MapProps {
   userLocation?: { lat: number; lng: number };
 }
 
+declare global {
+  interface Window {
+    google: any;
+    initMap: () => void;
+  }
+}
+
 const Map = ({ userLocation }: MapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const [mapboxToken, setMapboxToken] = useState('');
-  const [isTokenSet, setIsTokenSet] = useState(false);
+  const map = useRef<any>(null);
+  const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
+  const [isApiKeySet, setIsApiKeySet] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    if (!mapContainer.current || !isTokenSet || !mapboxToken) return;
+    if (!isApiKeySet || !googleMapsApiKey) return;
 
-    mapboxgl.accessToken = mapboxToken;
-    
+    // Load Google Maps script
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&callback=initMap`;
+    script.async = true;
+    script.defer = true;
+
+    window.initMap = () => {
+      setIsLoaded(true);
+    };
+
+    document.head.appendChild(script);
+
+    return () => {
+      const existingScript = document.querySelector(`script[src*="maps.googleapis.com"]`);
+      if (existingScript) {
+        existingScript.remove();
+      }
+      delete window.initMap;
+    };
+  }, [isApiKeySet, googleMapsApiKey]);
+
+  useEffect(() => {
+    if (!mapContainer.current || !isLoaded || map.current) return;
+
     const centerLat = userLocation?.lat || 6.5244;
     const centerLng = userLocation?.lng || 3.3792;
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: [centerLng, centerLat],
+    // Initialize Google Map
+    map.current = new window.google.maps.Map(mapContainer.current, {
+      center: { lat: centerLat, lng: centerLng },
       zoom: 12,
+      mapTypeControl: true,
+      streetViewControl: true,
+      fullscreenControl: true,
     });
-
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
     // Add user location marker if available
     if (userLocation) {
-      new mapboxgl.Marker({ color: 'hsl(var(--primary))' })
-        .setLngLat([userLocation.lng, userLocation.lat])
-        .setPopup(new mapboxgl.Popup().setHTML('<strong>Your Location</strong>'))
-        .addTo(map.current);
+      const userMarker = new window.google.maps.Marker({
+        position: { lat: userLocation.lat, lng: userLocation.lng },
+        map: map.current,
+        title: 'Your Location',
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: 'hsl(var(--primary))',
+          fillOpacity: 1,
+          strokeColor: 'white',
+          strokeWeight: 2,
+        },
+      });
+
+      const userInfoWindow = new window.google.maps.InfoWindow({
+        content: '<strong>Your Location</strong>',
+      });
+
+      userMarker.addListener('click', () => {
+        userInfoWindow.open(map.current, userMarker);
+      });
     }
 
     // Fetch and display services
@@ -49,18 +94,33 @@ const Map = ({ userLocation }: MapProps) => {
 
       services?.forEach((service) => {
         if (service.location_lat && service.location_lng && map.current) {
-          const popup = new mapboxgl.Popup().setHTML(`
-            <div class="p-2">
-              <h3 class="font-semibold text-sm">${service.title}</h3>
-              <p class="text-xs text-muted-foreground">${service.category}</p>
-              <p class="text-xs mt-1">${service.description.substring(0, 100)}...</p>
-            </div>
-          `);
+          const marker = new window.google.maps.Marker({
+            position: { lat: Number(service.location_lat), lng: Number(service.location_lng) },
+            map: map.current,
+            title: service.title,
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              fillColor: 'hsl(var(--trust))',
+              fillOpacity: 1,
+              strokeColor: 'white',
+              strokeWeight: 2,
+            },
+          });
 
-          new mapboxgl.Marker({ color: 'hsl(var(--trust))' })
-            .setLngLat([Number(service.location_lng), Number(service.location_lat)])
-            .setPopup(popup)
-            .addTo(map.current);
+          const infoWindow = new window.google.maps.InfoWindow({
+            content: `
+              <div style="padding: 8px; max-width: 200px;">
+                <h3 style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${service.title}</h3>
+                <p style="font-size: 12px; color: #666; margin-bottom: 4px;">${service.category}</p>
+                <p style="font-size: 12px;">${service.description.substring(0, 100)}...</p>
+              </div>
+            `,
+          });
+
+          marker.addListener('click', () => {
+            infoWindow.open(map.current, marker);
+          });
         }
       });
     };
@@ -74,59 +134,70 @@ const Map = ({ userLocation }: MapProps) => {
 
       events?.forEach((event) => {
         if (event.location_lat && event.location_lng && map.current) {
-          const popup = new mapboxgl.Popup().setHTML(`
-            <div class="p-2">
-              <h3 class="font-semibold text-sm">${event.title}</h3>
-              <p class="text-xs text-muted-foreground">${event.event_type}</p>
-              <p class="text-xs mt-1">${event.description.substring(0, 100)}...</p>
-            </div>
-          `);
+          const marker = new window.google.maps.Marker({
+            position: { lat: Number(event.location_lat), lng: Number(event.location_lng) },
+            map: map.current,
+            title: event.title,
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              fillColor: 'hsl(var(--secondary))',
+              fillOpacity: 1,
+              strokeColor: 'white',
+              strokeWeight: 2,
+            },
+          });
 
-          new mapboxgl.Marker({ color: 'hsl(var(--secondary))' })
-            .setLngLat([Number(event.location_lng), Number(event.location_lat)])
-            .setPopup(popup)
-            .addTo(map.current);
+          const infoWindow = new window.google.maps.InfoWindow({
+            content: `
+              <div style="padding: 8px; max-width: 200px;">
+                <h3 style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${event.title}</h3>
+                <p style="font-size: 12px; color: #666; margin-bottom: 4px;">${event.event_type}</p>
+                <p style="font-size: 12px;">${event.description.substring(0, 100)}...</p>
+              </div>
+            `,
+          });
+
+          marker.addListener('click', () => {
+            infoWindow.open(map.current, marker);
+          });
         }
       });
     };
 
     fetchServices();
     fetchEvents();
+  }, [isLoaded, userLocation]);
 
-    return () => {
-      map.current?.remove();
-    };
-  }, [isTokenSet, mapboxToken, userLocation]);
-
-  const handleTokenSubmit = (e: React.FormEvent) => {
+  const handleApiKeySubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (mapboxToken.trim()) {
-      setIsTokenSet(true);
+    if (googleMapsApiKey.trim()) {
+      setIsApiKeySet(true);
     }
   };
 
-  if (!isTokenSet) {
+  if (!isApiKeySet) {
     return (
       <div className="w-full h-[500px] flex items-center justify-center bg-muted/20 rounded-lg border border-border">
-        <form onSubmit={handleTokenSubmit} className="max-w-md w-full p-6 space-y-4">
+        <form onSubmit={handleApiKeySubmit} className="max-w-md w-full p-6 space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="mapbox-token">Enter Mapbox Public Token</Label>
+            <Label htmlFor="google-maps-key">Enter Google Maps API Key</Label>
             <Input
-              id="mapbox-token"
+              id="google-maps-key"
               type="text"
-              placeholder="pk.eyJ1Ijoi..."
-              value={mapboxToken}
-              onChange={(e) => setMapboxToken(e.target.value)}
+              placeholder="AIzaSy..."
+              value={googleMapsApiKey}
+              onChange={(e) => setGoogleMapsApiKey(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Get your token from{' '}
+              Get your API key from{' '}
               <a
-                href="https://account.mapbox.com/access-tokens/"
+                href="https://console.cloud.google.com/google/maps-apis"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:underline"
               >
-                Mapbox Account
+                Google Cloud Console
               </a>
             </p>
           </div>
@@ -137,6 +208,17 @@ const Map = ({ userLocation }: MapProps) => {
             Load Map
           </button>
         </form>
+      </div>
+    );
+  }
+
+  if (!isLoaded) {
+    return (
+      <div className="w-full h-[500px] flex items-center justify-center bg-muted/20 rounded-lg border border-border">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading Google Maps...</p>
+        </div>
       </div>
     );
   }
