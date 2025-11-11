@@ -11,7 +11,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import VendorDashboard from "./pages/VendorDashboard";
-import NgoDashboard from "./pages/NgoDashboard";
+
 import AdminDashboard from "./pages/AdminDashboard";
 import ServiceProfile from "./pages/ServiceProfile";
 import NotFound from "./pages/NotFound";
@@ -33,7 +33,6 @@ const App = () => (
           <Route path="/signup" element={<Signup />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/vendor/dashboard" element={<VendorDashboard />} />
-          <Route path="/ngo/dashboard" element={<NgoDashboard />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/service/:id" element={<ServiceProfile />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

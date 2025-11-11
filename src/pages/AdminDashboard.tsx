@@ -5,22 +5,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Users, Briefcase, Heart, Activity, LogOut } from "lucide-react";
+import { Users, Briefcase, Activity, LogOut } from "lucide-react";
 import { toast } from "sonner";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({ users: 0, vendors: 0, ngos: 0, services: 0, events: 0 });
+  const [stats, setStats] = useState({ users: 0, vendors: 0, services: 0, events: 0 });
   const [users, setUsers] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
-  const [ngos, setNgos] = useState<any[]>([]);
 
   useEffect(() => {
     checkAdminAccess();
     fetchStats();
     fetchUsers();
     fetchVendors();
-    fetchNgos();
   }, []);
 
   const checkAdminAccess = async () => {
@@ -43,10 +41,9 @@ const AdminDashboard = () => {
   };
 
   const fetchStats = async () => {
-    const [usersCount, vendorsCount, ngosCount, servicesCount, eventsCount] = await Promise.all([
+    const [usersCount, vendorsCount, servicesCount, eventsCount] = await Promise.all([
       supabase.from("profiles").select("*", { count: "exact", head: true }),
       supabase.from("vendor_profiles").select("*", { count: "exact", head: true }),
-      supabase.from("ngo_profiles").select("*", { count: "exact", head: true }),
       supabase.from("services").select("*", { count: "exact", head: true }),
       supabase.from("events").select("*", { count: "exact", head: true })
     ]);
@@ -54,7 +51,6 @@ const AdminDashboard = () => {
     setStats({
       users: usersCount.count || 0,
       vendors: vendorsCount.count || 0,
-      ngos: ngosCount.count || 0,
       services: servicesCount.count || 0,
       events: eventsCount.count || 0
     });
@@ -78,14 +74,6 @@ const AdminDashboard = () => {
     setVendors(data || []);
   };
 
-  const fetchNgos = async () => {
-    const { data } = await supabase
-      .from("ngo_profiles")
-      .select("*, profiles(*)")
-      .order("created_at", { ascending: false })
-      .limit(10);
-    setNgos(data || []);
-  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -107,7 +95,7 @@ const AdminDashboard = () => {
 
       <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Stats Cards */}
-        <div className="grid md:grid-cols-5 gap-4">
+        <div className="grid md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Total Users</CardDescription>
@@ -124,15 +112,6 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent>
               <Briefcase className="h-4 w-4 text-muted-foreground" />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>NGOs</CardDescription>
-              <CardTitle className="text-3xl">{stats.ngos}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Heart className="h-4 w-4 text-muted-foreground" />
             </CardContent>
           </Card>
           <Card>
@@ -156,12 +135,11 @@ const AdminDashboard = () => {
         </div>
 
         {/* Data Tables */}
-        <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="vendors">Vendors</TabsTrigger>
-            <TabsTrigger value="ngos">NGOs</TabsTrigger>
-          </TabsList>
+          <Tabs defaultValue="users" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="users">Users</TabsTrigger>
+              <TabsTrigger value="vendors">Vendors</TabsTrigger>
+            </TabsList>
 
           <TabsContent value="users" className="space-y-4">
             {users.map((user) => (
@@ -192,23 +170,6 @@ const AdminDashboard = () => {
             ))}
           </TabsContent>
 
-          <TabsContent value="ngos" className="space-y-4">
-            {ngos.map((ngo) => (
-              <Card key={ngo.id}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>{ngo.organization_name}</CardTitle>
-                      <CardDescription>{ngo.impact_area}</CardDescription>
-                    </div>
-                    <Badge variant={ngo.verification_status ? "default" : "secondary"}>
-                      {ngo.verification_status ? "Verified" : "Pending"}
-                    </Badge>
-                  </div>
-                </CardHeader>
-              </Card>
-            ))}
-          </TabsContent>
         </Tabs>
       </div>
     </div>

@@ -41,8 +41,6 @@ const Login = () => {
           navigate("/admin/dashboard");
         } else if (roles?.role === "vendor") {
           navigate("/vendor/dashboard");
-        } else if (roles?.role === "ngo") {
-          navigate("/ngo/dashboard");
         } else {
           navigate("/dashboard");
         }

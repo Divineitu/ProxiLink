@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Briefcase, Heart } from "lucide-react";
+import { Users, Briefcase } from "lucide-react";
 
 const RoleSelection = () => {
   const navigate = useNavigate();
@@ -19,13 +19,6 @@ const RoleSelection = () => {
       description: "Provide services and connect with customers",
       icon: Briefcase,
       color: "bg-secondary"
-    },
-    {
-      id: "ngo",
-      title: "I represent an NGO",
-      description: "Organize events and community programs",
-      icon: Heart,
-      color: "bg-accent"
     }
   ];
 
@@ -41,7 +34,7 @@ const RoleSelection = () => {
           <p className="text-muted-foreground text-lg">Choose your role to get started</p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
           {roles.map((role) => {
             const Icon = role.icon;
             return (

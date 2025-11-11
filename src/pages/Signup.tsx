@@ -23,8 +23,6 @@ const Signup = () => {
   // Role-specific fields
   const [businessName, setBusinessName] = useState("");
   const [category, setCategory] = useState("");
-  const [organizationName, setOrganizationName] = useState("");
-  const [impactArea, setImpactArea] = useState("");
   const [description, setDescription] = useState("");
 
   useEffect(() => {
@@ -82,14 +80,6 @@ const Signup = () => {
             description: description,
           });
           if (error) throw error;
-        } else if (selectedRole === "ngo") {
-          const { error } = await supabase.from("ngo_profiles").insert({
-            user_id: authData.user.id,
-            organization_name: organizationName || fullName,
-            impact_area: impactArea || "community",
-            description: description,
-          });
-          if (error) throw error;
         }
 
         toast.success("Account created successfully!");
@@ -97,8 +87,6 @@ const Signup = () => {
         // Redirect based on role
         if (selectedRole === "vendor") {
           navigate("/vendor/dashboard");
-        } else if (selectedRole === "ngo") {
-          navigate("/ngo/dashboard");
         } else {
           navigate("/dashboard");
         }
@@ -113,8 +101,7 @@ const Signup = () => {
   const getRoleBadge = () => {
     const roleMap: Record<string, { label: string; color: string }> = {
       user: { label: "User", color: "bg-primary" },
-      vendor: { label: "Vendor", color: "bg-secondary" },
-      ngo: { label: "NGO", color: "bg-accent" }
+      vendor: { label: "Vendor", color: "bg-secondary" }
     };
     return roleMap[selectedRole] || roleMap.user;
   };
@@ -219,38 +206,6 @@ const Signup = () => {
               </>
             )}
 
-            {selectedRole === "ngo" && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="organizationName">Organization Name</Label>
-                  <Input
-                    id="organizationName"
-                    placeholder="Your Organization"
-                    value={organizationName}
-                    onChange={(e) => setOrganizationName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="impactArea">Impact Area</Label>
-                  <Input
-                    id="impactArea"
-                    placeholder="e.g., Health, Education"
-                    value={impactArea}
-                    onChange={(e) => setImpactArea(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Tell us about your organization"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={3}
-                  />
-                </div>
-              </>
-            )}
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Creating account..." : "Sign Up"}

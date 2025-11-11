@@ -71,8 +71,7 @@ const Dashboard = () => {
       .from("events")
       .select(`
         *,
-        profiles(full_name),
-        ngo_profiles(organization_name)
+        profiles(full_name)
       `)
       .in("status", ["upcoming", "ongoing"])
       .order("event_date", { ascending: true })

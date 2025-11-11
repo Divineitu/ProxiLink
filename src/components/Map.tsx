@@ -69,7 +69,7 @@ const Map = ({ userLocation }: MapProps) => {
     const fetchEvents = async () => {
       const { data: events } = await supabase
         .from('events')
-        .select('*, profiles(*), ngo_profiles(*)')
+        .select('*, profiles(*)')
         .in('status', ['upcoming', 'ongoing']);
 
       events?.forEach((event) => {

@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { MapPin, Users, Briefcase, Heart, ArrowRight, Check } from "lucide-react";
+import { MapPin, Users, Briefcase, ArrowRight, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 const Index = () => {
   return <div className="min-h-screen bg-background">
@@ -38,7 +38,7 @@ const Index = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           <div className="bg-card rounded-xl p-8 shadow-soft border border-border hover:shadow-strong transition-all">
             <div className="w-14 h-14 bg-gradient-hero rounded-lg flex items-center justify-center mb-6">
               <Users className="h-7 w-7 text-primary-foreground" />
@@ -87,29 +87,6 @@ const Index = () => {
             </ul>
           </div>
 
-          <div className="bg-card rounded-xl p-8 shadow-soft border border-border hover:shadow-strong transition-all">
-            <div className="w-14 h-14 bg-accent rounded-lg flex items-center justify-center mb-6">
-              <Heart className="h-7 w-7 text-accent-foreground" />
-            </div>
-            <h3 className="text-2xl font-bold mb-4">For NGOs</h3>
-            <p className="text-muted-foreground mb-6">
-              Alert communities about events, health drives, and awareness campaigns with targeted reach
-            </p>
-            <ul className="space-y-3">
-              <li className="flex items-start gap-2">
-                <Check className="h-5 w-5 text-accent mt-0.5" />
-                <span className="text-sm">Event broadcasting</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Check className="h-5 w-5 text-accent mt-0.5" />
-                <span className="text-sm">Community engagement</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Check className="h-5 w-5 text-accent mt-0.5" />
-                <span className="text-sm">Impact tracking</span>
-              </li>
-            </ul>
-          </div>
         </div>
       </section>
 
@@ -125,7 +102,7 @@ const Index = () => {
             <div className="text-center">
               <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 text-primary-foreground text-2xl font-bold">1</div>
               <h3 className="font-bold mb-2 text-lg">Register</h3>
-              <p className="text-muted-foreground text-sm">Choose your role: User, Vendor, or NGO</p>
+              <p className="text-muted-foreground text-sm">Choose your role: User or Vendor</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 text-primary-foreground text-2xl font-bold">2</div>
