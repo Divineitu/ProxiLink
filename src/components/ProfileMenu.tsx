@@ -8,8 +8,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 
+interface Profile {
+  full_name?: string;
+  email?: string;
+  phone?: string;
+  location_lat?: number;
+  location_lng?: number;
+}
+
 interface ProfileMenuProps {
-  profile: any;
+  profile?: Profile;
 }
 
 const ProfileMenu = ({ profile }: ProfileMenuProps) => {
@@ -27,9 +35,9 @@ const ProfileMenu = ({ profile }: ProfileMenuProps) => {
       <SheetTrigger asChild>
         <Button
           size="icon"
-          className="fixed top-4 right-4 z-50 h-12 w-12 rounded-full shadow-lg bg-card border-2 border-border hover:shadow-xl transition-shadow"
+          className="relative h-10 w-10 rounded-full shadow bg-card border border-border hover:shadow-lg transition-shadow text-foreground"
         >
-          <User className="h-5 w-5" />
+          <User className="h-5 w-5 text-foreground" />
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">

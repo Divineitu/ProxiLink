@@ -1,26 +1,57 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import demoServices from '@/data/demoServices';
+import demoVendors from '@/data/demoVendors';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Phone, MapPin, Star, Calendar } from "lucide-react";
 import { toast } from "sonner";
+import ReviewForm from '@/components/ReviewForm';
+
+type Service = {
+  id?: string;
+  title?: string;
+  description?: string;
+  vendor_profiles?: { business_name?: string };
+  profiles?: { avatar_url?: string; full_name?: string };
+  price?: number;
+  radius_meters?: number;
+  category?: string;
+};
+
+type Review = {
+  id?: string | number;
+  rating?: number;
+  profiles?: { avatar_url?: string; full_name?: string };
+  comment?: string;
+};
 
 const ServiceProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [service, setService] = useState<any>(null);
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [service, setService] = useState<Service | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchServiceDetails();
-    fetchReviews();
-  }, [id]);
-
-  const fetchServiceDetails = async () => {
+  const fetchServiceDetails = useCallback(async () => {
+    const useDemo = import.meta.env.VITE_USE_DEMO_VENDORS === 'true';
+    if (useDemo) {
+      const demo = demoServices.find((d: unknown) => (d as unknown as { id?: string }).id === id);
+      if (demo) {
+        type Vendor = { id?: string; business_name?: string; profiles?: { full_name?: string } };
+        const vendor = (demoVendors.find((v: unknown) => (v as unknown as { id?: string }).id === (demo as unknown as { vendor_id?: string }).vendor_id) || ({} as Vendor)) as Vendor;
+        setService({
+          ...(demo as unknown as Service),
+          vendor_profiles: { business_name: vendor.business_name },
+          profiles: { full_name: vendor.profiles?.full_name },
+        });
+        setLoading(false);
+        return;
+      }
+    }
     const { data, error } = await supabase
       .from("services")
       .select(`
@@ -38,9 +69,9 @@ const ServiceProfile = () => {
       setService(data);
     }
     setLoading(false);
-  };
+  }, [id, navigate]);
 
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     const { data } = await supabase
       .from("reviews")
       .select(`
@@ -52,7 +83,12 @@ const ServiceProfile = () => {
       .limit(5);
 
     setReviews(data || []);
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchServiceDetails();
+    fetchReviews();
+  }, [fetchServiceDetails, fetchReviews]);
 
   if (loading) {
     return (
@@ -65,7 +101,7 @@ const ServiceProfile = () => {
   if (!service) return null;
 
   const avgRating = reviews.length > 0
-    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+    ? (reviews.reduce((sum, r) => sum + (r.rating ?? 0), 0) / reviews.length).toFixed(1)
     : "N/A";
 
   return (
@@ -169,6 +205,12 @@ const ServiceProfile = () => {
                 ))}
               </div>
             )}
+            
+            {/* Review submission form */}
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold mb-2">Leave a review</h3>
+              <ReviewForm serviceId={String(id)} onSubmitted={() => fetchReviews()} />
+            </div>
           </CardContent>
         </Card>
       </div>

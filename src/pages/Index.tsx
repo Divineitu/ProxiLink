@@ -85,6 +85,14 @@ const Index = () => {
                 <span className="text-sm">Customer reviews</span>
               </li>
             </ul>
+            <div className="mt-6 flex gap-3">
+              <Button asChild size="sm" variant="secondary">
+                <Link to="/service/create">Create Service</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link to="/services">View Services</Link>
+              </Button>
+            </div>
           </div>
 
         </div>

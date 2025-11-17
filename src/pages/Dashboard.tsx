@@ -1,41 +1,34 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Map from "@/components/Map";
 import ProfileMenu from "@/components/ProfileMenu";
+import NotificationBell from '@/components/NotificationBell';
+import Sidebar from '@/components/Sidebar';
 import ServiceProviderList from "@/components/ServiceProviderList";
+import { useGeolocation } from "@/hooks/useGeolocation";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { MapPin, Bell } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<any>(null);
-  const [services, setServices] = useState<any[]>([]);
-  const [events, setEvents] = useState<any[]>([]);
+  const { location, requestLocation, error: geoError } = useGeolocation();
+  const { subscribed, loading: pushLoading, subscribeToPushNotifications, unsubscribeFromPushNotifications } = usePushNotifications();
+  type Profile = { id?: string; business_name?: string; location_lat?: number; location_lng?: number };
+  // vendor_profiles shape can vary depending on Supabase relation shape
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  type ServiceItem = { id?: string; vendor_profiles?: any; description?: string; title?: string; price?: number };
+  type EventItem = { id?: string; event_date?: string; event_type?: string; status?: string };
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [services, setServices] = useState<ServiceItem[]>([]);
+  const [events, setEvents] = useState<EventItem[]>([]);
   const [showProximityAlert, setShowProximityAlert] = useState(false);
-  const [nearbyProvider, setNearbyProvider] = useState<any>(null);
+  const [nearbyProvider, setNearbyProvider] = useState<ServiceItem | null>(null);
 
-  useEffect(() => {
-    fetchUserData();
-    fetchServices();
-    fetchEvents();
-    
-    // Simulate proximity alert for demo (in production, use geolocation)
-    const alertTimer = setTimeout(() => {
-      if (services.length > 0) {
-        setNearbyProvider(services[0]);
-        setShowProximityAlert(true);
-        toast.success(`📍 ${services[0].vendor_profiles?.business_name || "A service provider"} is nearby!`, {
-          duration: 5000,
-        });
-      }
-    }, 5000);
-
-    return () => clearTimeout(alertTimer);
-  }, [services]);
-
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       navigate("/login");
@@ -49,9 +42,61 @@ const Dashboard = () => {
       .single();
 
     setProfile(data);
-  };
+  }, [navigate]);
+  
+  
 
-  const fetchServices = async () => {
+  useEffect(() => {
+    fetchUserData();
+
+    // Request location permission on dashboard load
+    const timer = setTimeout(() => {
+      if (!location) {
+        requestLocation();
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [fetchUserData, location, requestLocation]);
+
+  // Simulate proximity alert for demo (in production, use geolocation)
+  useEffect(() => {
+    const alertTimer = setTimeout(() => {
+      if (services.length > 0) {
+        setNearbyProvider(services[0]);
+        setShowProximityAlert(true);
+        toast.success(`📍 ${services[0].vendor_profiles?.business_name || "A service provider"} is nearby!`, {
+          duration: 5000,
+        });
+      }
+    }, 5000);
+
+    return () => clearTimeout(alertTimer);
+  }, [services]);
+
+  // Update user location in database when geolocation changes
+  useEffect(() => {
+    const updateLocationInDatabase = async () => {
+      if (location && profile) {
+        try {
+          await supabase
+            .from("profiles")
+            .update({
+              location_lat: location.lat,
+              location_lng: location.lng,
+              last_location_update: new Date().toISOString(),
+            })
+            .eq("id", profile.id);
+        } catch (error) {
+          console.error("Failed to update location:", error);
+        }
+      }
+    };
+
+    updateLocationInDatabase();
+  }, [location, profile]);
+
+  const fetchServices = useCallback(async () => {
     const { data } = await supabase
       .from("services")
       .select(`
@@ -64,9 +109,9 @@ const Dashboard = () => {
       .limit(10);
 
     setServices(data || []);
-  };
+  }, []);
 
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     const { data } = await supabase
       .from("events")
       .select(`
@@ -78,12 +123,37 @@ const Dashboard = () => {
       .limit(10);
 
     setEvents(data || []);
-  };
+  }, []);
 
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-background">
-      {/* Full-screen Map */}
-      <div className="absolute inset-0">
+    <div className="min-h-screen w-full bg-background">
+      {/* Top header in normal flow so it doesn't overlap the map */}
+      <div className="container mx-auto px-4 py-4">
+        <div className="bg-card/95 backdrop-blur-sm px-4 py-3 rounded-2xl shadow-lg border border-border flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <MapPin className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold">ProxiLink</h1>
+              <p className="text-sm text-muted-foreground">{profile?.business_name || 'Vendor'}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <NotificationBell />
+            <ProfileMenu profile={profile} />
+          </div>
+        </div>
+      </div>
+
+      {/* Sidebar trigger (hamburger) */}
+      <Sidebar />
+
+      {/* Fullscreen Map */}
+      <div className="w-full h-screen">
+        {/* debug: log map render to console without returning a node */}
+        {typeof window !== 'undefined' && (() => { console.log('Rendering Map container with profile location:', profile?.location_lat, profile?.location_lng); return null; })()}
         <Map 
           userLocation={profile?.location_lat && profile?.location_lng ? {
             lat: Number(profile.location_lat),
@@ -92,18 +162,7 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* Logo/Brand - Top Left */}
-      <div className="fixed top-4 left-4 z-50 bg-card/95 backdrop-blur-sm px-4 py-3 rounded-2xl shadow-lg border border-border">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-hero rounded-lg flex items-center justify-center">
-            <MapPin className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <h1 className="text-lg font-bold">ProxiLink</h1>
-        </div>
-      </div>
-
-      {/* Profile Menu - Top Right */}
-      <ProfileMenu profile={profile} />
+      {/* (Old fixed header removed; notification and profile moved to overlay header) */}
 
       {/* Proximity Alert - Top Center */}
       {showProximityAlert && nearbyProvider && (

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,16 +10,72 @@ import { toast } from "sonner";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  type UserProfile = { id?: string; full_name?: string; phone?: string };
+  type VendorProfile = { id?: string; business_name?: string; category?: string; verification_status?: boolean };
+
   const [stats, setStats] = useState({ users: 0, vendors: 0, services: 0, events: 0 });
-  const [users, setUsers] = useState<any[]>([]);
-  const [vendors, setVendors] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [vendors, setVendors] = useState<VendorProfile[]>([]);
+
+  const checkAdminAccess = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id);
+
+    const isAdmin = roles?.some(r => r.role === "admin");
+    if (!isAdmin) {
+      toast.error("Access denied");
+      navigate("/dashboard");
+    }
+  }, [navigate]);
+
+  const fetchStats = useCallback(async () => {
+    const [usersCount, vendorsCount, servicesCount, eventsCount] = await Promise.all([
+      supabase.from("profiles").select("*", { count: "exact", head: true }),
+      supabase.from("vendor_profiles").select("*", { count: "exact", head: true }),
+      supabase.from("services").select("*", { count: "exact", head: true }),
+      supabase.from("events").select("*", { count: "exact", head: true })
+    ]);
+
+    setStats({
+      users: usersCount.count || 0,
+      vendors: vendorsCount.count || 0,
+      services: servicesCount.count || 0,
+      events: eventsCount.count || 0
+    });
+  }, []);
+
+  const fetchUsers = useCallback(async () => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(10);
+    setUsers(data || []);
+  }, []);
+
+  const fetchVendors = useCallback(async () => {
+    const { data } = await supabase
+      .from("vendor_profiles")
+      .select("*, profiles(*)")
+      .order("created_at", { ascending: false })
+      .limit(10);
+    setVendors(data || []);
+  }, []);
 
   useEffect(() => {
     checkAdminAccess();
     fetchStats();
     fetchUsers();
     fetchVendors();
-  }, []);
+  }, [checkAdminAccess, fetchStats, fetchUsers, fetchVendors]);
 
   const checkAdminAccess = async () => {
     const { data: { user } } = await supabase.auth.getUser();

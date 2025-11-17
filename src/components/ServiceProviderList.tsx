@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import demoServices from '@/data/demoServices';
+import demoVendors from '@/data/demoVendors';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,26 +10,106 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { ChevronUp, MapPin, Star, Phone, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+type BaseItem = {
+  id?: string;
+  type?: string;
+  title?: string;
+  description?: string;
+  price?: number;
+  category?: string;
+  vendor_id?: string;
+  vendor_profiles?: { business_name?: string; location_lat?: number; location_lng?: number };
+  profiles?: { avatar_url?: string; location_lat?: number; location_lng?: number; full_name?: string };
+  services?: BaseItem[];
+  business_name?: string;
+  event_date?: string;
+  event_type?: string;
+  status?: string;
+};
+
 interface ServiceProviderListProps {
-  services: any[];
-  events: any[];
+  services: BaseItem[];
+  events: BaseItem[];
 }
 
 const ServiceProviderList = ({ services, events }: ServiceProviderListProps) => {
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [fullyExpanded, setFullyExpanded] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<BaseItem | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const listRef = useRef<HTMLDivElement | null>(null);
 
-  const allProviders = [
-    ...services.map(s => ({ ...s, type: 'service' })),
-    ...events.map(e => ({ ...e, type: 'event' }))
-  ];
+  const useDemo = import.meta.env.VITE_USE_DEMO_VENDORS === 'true';
 
-  const handleItemClick = (item: any) => {
+  // If demo mode, group demo services by vendor to show richer vendor cards
+  const allProviders = useMemo(() => {
+    if (useDemo) {
+      // group demoServices by vendor
+      const byVendor: Record<string, BaseItem> = {};
+      demoServices.forEach((s: BaseItem) => {
+        const vendor = demoVendors.find((v: BaseItem) => v.id === s.vendor_id) || ({} as BaseItem);
+        const key = s.vendor_id ?? '';
+        if (!byVendor[key]) {
+          byVendor[key] = {
+            id: vendor.id || s.vendor_id,
+            business_name: vendor.business_name || 'Unknown Vendor',
+            profiles: vendor.profiles || {},
+            type: 'vendor',
+            services: [],
+          };
+        }
+        byVendor[key].services = byVendor[key].services || [];
+        byVendor[key].services!.push({ ...(s as BaseItem) });
+      });
+
+      return Object.values(byVendor);
+    }
+
+    return [
+      ...services.map((s) => ({ ...s, type: 'service' })),
+      ...events.map((e) => ({ ...e, type: 'event' })),
+    ];
+  }, [services, events, useDemo]);
+
+  const handleItemClick = (item: BaseItem) => {
     setSelectedItem(item);
     setDetailsOpen(true);
+
+    // If the item has coordinates (vendor card in demo mode), dispatch a pan event for the map to handle
+    const coords = item.profiles?.location_lat && item.profiles?.location_lng
+      ? { lat: Number(item.profiles.location_lat), lng: Number(item.profiles.location_lng) }
+      : item.vendor_profiles?.location_lat && item.vendor_profiles?.location_lng
+      ? { lat: Number(item.vendor_profiles.location_lat), lng: Number(item.vendor_profiles.location_lng) }
+      : null;
+
+    if (coords && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('proxiPanTo', { detail: coords }));
+    }
   };
+
+  // Expand to full screen when user scrolls to bottom of the provider list
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+
+    const onScroll = () => {
+      try {
+        const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 40;
+        if (atBottom && isExpanded && !fullyExpanded) {
+          setFullyExpanded(true);
+        } else if (!atBottom && fullyExpanded && isExpanded && el.scrollTop <= 40) {
+          // allow user to retract from full screen when scrolled to top
+          setFullyExpanded(false);
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    el.addEventListener('scroll', onScroll);
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [isExpanded, fullyExpanded]);
 
   return (
     <>
@@ -34,7 +117,7 @@ const ServiceProviderList = ({ services, events }: ServiceProviderListProps) => 
       <div
         className={cn(
           "fixed bottom-0 left-0 right-0 bg-card border-t border-border rounded-t-3xl shadow-2xl transition-all duration-300 z-40",
-          isExpanded ? "h-[70vh]" : "h-[30vh]"
+          isExpanded ? (fullyExpanded ? "h-screen" : "h-[70vh]") : "h-[84px]"
         )}
       >
         {/* Drag Handle */}
@@ -48,14 +131,27 @@ const ServiceProviderList = ({ services, events }: ServiceProviderListProps) => 
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold">Nearby Providers</h2>
-              <p className="text-sm text-muted-foreground">
-                {allProviders.length} services & events available
-              </p>
+              <p className="text-sm text-muted-foreground">{allProviders.length} services near you</p>
+
+              {!isExpanded && allProviders.length > 0 && (
+                <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+                  {allProviders.slice(0, 10).map((p, i) => (
+                    <div key={p.id || i} className="px-2 py-1 bg-muted/80 dark:bg-muted/30 rounded-full text-xs whitespace-nowrap">
+                      {p.business_name || p.title || p.vendor_profiles?.business_name}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setIsExpanded(!isExpanded)}
+              onClick={() => {
+                const next = !isExpanded;
+                setIsExpanded(next);
+                if (!next) setFullyExpanded(false);
+                if (next) setFullyExpanded(false);
+              }}
               className="rounded-full"
             >
               <ChevronUp 
@@ -68,60 +164,97 @@ const ServiceProviderList = ({ services, events }: ServiceProviderListProps) => 
           </div>
         </div>
 
-        {/* Provider List */}
-        <div className="overflow-y-auto h-[calc(100%-100px)] px-6 pb-6 space-y-3">
-          {allProviders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <MapPin className="h-12 w-12 mb-2 opacity-50" />
-              <p>No providers found nearby</p>
-            </div>
-          ) : (
-            allProviders.map((item) => (
-              <Card 
-                key={item.id} 
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => handleItemClick(item)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold truncate">{item.title}</h3>
-                        {item.type === 'service' ? (
-                          <Badge variant="default" className="shrink-0">Service</Badge>
-                        ) : (
-                          <Badge variant="secondary" className="shrink-0">Event</Badge>
+        {/* Provider List - only render when expanded */}
+        {isExpanded && (
+          <div ref={listRef} className="overflow-y-auto h-[calc(100%-100px)] px-6 pb-6 space-y-3">
+            {allProviders.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <MapPin className="h-12 w-12 mb-2 opacity-50" />
+                <p>No providers found nearby</p>
+              </div>
+              ) : (
+                allProviders.map((item: BaseItem) => (
+                item.type === 'vendor' ? (
+                  <Card key={item.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleItemClick(item)}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-12 h-12">
+                            <AvatarImage src={item.profiles?.avatar_url} />
+                            <AvatarFallback>{item.business_name?.[0] || 'V'}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold truncate">{item.business_name}</h3>
+                              <Badge variant="default" className="shrink-0">Vendor</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                              {item.services?.slice(0,2).map((s: BaseItem) => s.title).join(' · ')}
+                            </p>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <Badge variant="outline" className="text-xs">
+                                {item.services?.length} services
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 text-sm shrink-0">
+                          <div className="text-right">
+                            <div className="text-sm font-medium">4.8</div>
+                            <div className="text-xs text-muted-foreground">(23 reviews)</div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card 
+                    key={item.id} 
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => handleItemClick(item)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold truncate">{item.title}</h3>
+                            {item.type === 'service' ? (
+                              <Badge variant="default" className="shrink-0">Service</Badge>
+                            ) : (
+                              <Badge variant="secondary" className="shrink-0">Event</Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                            {item.description}
+                          </p>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            {item.type === 'service' && item.price && (
+                              <span className="flex items-center gap-1">
+                                <DollarSign className="h-3 w-3" />
+                                ₦{item.price}
+                              </span>
+                            )}
+                            {item.category && (
+                              <Badge variant="outline" className="text-xs">
+                                {item.category}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        {item.type === 'service' && (
+                          <div className="flex items-center gap-1 text-sm shrink-0">
+                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                            <span className="font-medium">4.8</span>
+                          </div>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                        {item.description}
-                      </p>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        {item.type === 'service' && item.price && (
-                          <span className="flex items-center gap-1">
-                            <DollarSign className="h-3 w-3" />
-                            ₦{item.price}
-                          </span>
-                        )}
-                        {item.category && (
-                          <Badge variant="outline" className="text-xs">
-                            {item.category}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    {item.type === 'service' && (
-                      <div className="flex items-center gap-1 text-sm shrink-0">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span className="font-medium">4.8</span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
+                    </CardContent>
+                  </Card>
+                )
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {/* Details Sheet */}
