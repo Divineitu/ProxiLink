@@ -12,11 +12,17 @@ export interface GeolocationState {
   loading: boolean;
   error: string | null;
   isWatching: boolean;
+  permissionGranted: boolean;
 }
+
+const LOCATION_CACHE_KEY = 'proxilink_last_location';
+const PERMISSION_CACHE_KEY = 'proxilink_location_permission';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Custom hook for browser geolocation
  * Manages location requests, permissions, and tracking
+ * Automatically requests location if permission was previously granted
  */
 export const useGeolocation = () => {
   const [state, setState] = useState<GeolocationState>({
@@ -24,9 +30,11 @@ export const useGeolocation = () => {
     loading: false,
     error: null,
     isWatching: false,
+    permissionGranted: false,
   });
 
   const [watchId, setWatchId] = useState<number | null>(null);
+  const [autoRequested, setAutoRequested] = useState(false);
 
   /**
    * Request user's current location (one-time)
@@ -67,17 +75,26 @@ export const useGeolocation = () => {
         if (error.code === error.PERMISSION_DENIED) {
           errorMessage =
             'Permission denied. Please enable location access in your browser settings.';
+          localStorage.setItem(PERMISSION_CACHE_KEY, 'denied');
+          setState(prev => ({ ...prev, permissionGranted: false }));
         } else if (error.code === error.POSITION_UNAVAILABLE) {
           errorMessage = 'Location information is unavailable.';
         } else if (error.code === error.TIMEOUT) {
           errorMessage = 'The request to get user location timed out.';
         }
 
-        setState((prev) => ({
-          ...prev,
-          loading: false,
-          error: errorMessage,
-        }));
+        if (!silent) {
+          setState((prev) => ({
+            ...prev,
+            loading: false,
+            error: errorMessage,
+          }));
+        } else {
+          setState((prev) => ({
+            ...prev,
+            loading: false,
+          }));
+        }
       },
       {
         enableHighAccuracy: true,
@@ -164,6 +181,31 @@ export const useGeolocation = () => {
   }, []);
 
   /**
+   * Auto-request location on mount if permission granted or cached location available
+   */
+  useEffect(() => {
+    const autoRequest = async () => {
+      if (autoRequested) return;
+      setAutoRequested(true);
+
+      // First, try to load cached location
+      const hasCached = loadCachedLocation();
+      
+      // Then check permission and auto-request if granted
+      const hasPermission = await checkPermission();
+      
+      if (hasPermission && !hasCached) {
+        console.log('Auto-requesting location (permission granted)');
+        requestLocation(true); // Silent mode
+      } else if (hasCached) {
+        console.log('Using cached location, skipping auto-request');
+      }
+    };
+
+    autoRequest();
+  }, [autoRequested, loadCachedLocation, checkPermission, requestLocation]);
+
+  /**
    * Cleanup on unmount
    */
   useEffect(() => {
@@ -179,6 +221,7 @@ export const useGeolocation = () => {
     loading: state.loading,
     error: state.error,
     isWatching: state.isWatching,
+    permissionGranted: state.permissionGranted,
     requestLocation,
     startWatching,
     stopWatching,
