@@ -6,6 +6,19 @@
 All colors MUST be HSL.
 */
 
+@keyframes shrink-width {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+.animate-shrink-width {
+  animation: shrink-width linear forwards;
+}
+
 @layer base {
   :root {
     /* ProxiLink Design System - African-inspired modern palette */

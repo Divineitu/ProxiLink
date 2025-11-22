@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import MapWrapper from "@/components/MapWrapper";
-import ProfileMenu from "@/components/ProfileMenu";
 import NotificationBell from '@/components/NotificationBell';
 import Sidebar from '@/components/Sidebar';
 import ServiceProviderList from "@/components/ServiceProviderList";
@@ -111,23 +110,11 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen w-full bg-background">
-      {/* Top header in normal flow so it doesn't overlap the map */}
-      <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
-        <div className="bg-card/95 backdrop-blur-sm px-3 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl shadow-lg border border-border flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shrink-0">
-              <MapPin className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-bold truncate">ProxiLink</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground truncate">{profile?.business_name || 'Vendor'}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <NotificationBell />
-            <ProfileMenu profile={profile} />
-          </div>
+      {/* Floating header over map */}
+      <div className="fixed top-0 left-0 right-0 z-50 px-4 py-3 sm:py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <h1 className="text-lg sm:text-xl font-bold text-white drop-shadow-lg">ProxiLink</h1>
+          <NotificationBell />
         </div>
       </div>
 

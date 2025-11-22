@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { createRoot } from 'react-dom/client';
+import NotificationToast from '@/components/NotificationToast';
 import { demoNotifications, incomingDemoNotifications } from '@/data/demoNotifications';
 
 export interface NotificationRow {
@@ -19,25 +20,65 @@ export function useNotifications() {
   const [loading, setLoading] = useState(true);
   const notificationIndexRef = useRef(0);
   const demoTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const toastContainerRef = useRef<HTMLDivElement | null>(null);
+  const toastRootRef = useRef<any>(null);
+
+  // Function to show custom toast
+  const showNotificationToast = useCallback((title: string, content: string) => {
+    // Create container if it doesn't exist
+    if (!toastContainerRef.current) {
+      toastContainerRef.current = document.createElement('div');
+      toastContainerRef.current.id = 'notification-toast-container';
+      document.body.appendChild(toastContainerRef.current);
+      toastRootRef.current = createRoot(toastContainerRef.current);
+    }
+
+    // Render the toast
+    toastRootRef.current.render(
+      <NotificationToast
+        title={title}
+        content={content}
+        duration={6000} // 6 seconds
+        onDismiss={() => {
+          toastRootRef.current?.render(null);
+        }}
+      />
+    );
+  }, []);
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const { data } = await supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user) {
+        // Use demo notifications for non-authenticated users
+        setNotifications([...demoNotifications]);
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
         .from('notifications')
         .select('*')
+        .eq('user_id', session.user.id)
         .order('created_at', { ascending: false })
         .limit(50);
 
-      // Add demo notifications if empty or use data from database
-      const allNotifications = (data as NotificationRow[]) || [];
-      if (allNotifications.length === 0) {
+      if (error) {
+        console.error('Error fetching notifications:', error);
+        // Fallback to demo notifications
         setNotifications([...demoNotifications]);
       } else {
-        setNotifications(allNotifications);
+        // Mix real and demo notifications
+        const allNotifications = [...(data as NotificationRow[])];
+        if (allNotifications.length === 0) {
+          setNotifications([...demoNotifications]);
+        } else {
+          setNotifications(allNotifications);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch notifications', err);
-      // Still show demo notifications on error
       setNotifications([...demoNotifications]);
     } finally {
       setLoading(false);
@@ -64,15 +105,7 @@ export function useNotifications() {
         };
 
         setNotifications((prev) => [newNotification, ...prev]);
-        toast(
-          <div className="flex flex-col">
-            <span className="font-semibold">{newNotification.title}</span>
-            <span className="text-sm text-muted-foreground">{newNotification.content}</span>
-          </div>,
-          {
-            duration: 4000,
-          }
-        );
+        showNotificationToast(newNotification.title, newNotification.content);
 
         notificationIndexRef.current += 1;
         scheduleNextNotification(); // Schedule the next one
@@ -110,15 +143,7 @@ export function useNotifications() {
               const newRow = payload.new as NotificationRow;
               if (!mounted || !newRow) return;
               setNotifications((prev) => [newRow, ...prev]);
-              toast(
-                <div className="flex flex-col">
-                  <span className="font-semibold">{newRow.title}</span>
-                  <span className="text-sm text-muted-foreground">{newRow.content}</span>
-                </div>,
-                {
-                  duration: 4000,
-                }
-              );
+              showNotificationToast(newRow.title, newRow.content);
             }
           )
           .subscribe();
@@ -160,9 +185,16 @@ export function useNotifications() {
         clearTimeout(demoTimerRef.current);
         demoTimerRef.current = null;
       }
+      // Cleanup toast container
+      if (toastContainerRef.current) {
+        toastRootRef.current?.unmount();
+        document.body.removeChild(toastContainerRef.current);
+        toastContainerRef.current = null;
+        toastRootRef.current = null;
+      }
       if (typeof cleanupFn === 'function') cleanupFn();
     };
-  }, [fetchNotifications, startDemoNotifications]);
+  }, [fetchNotifications, startDemoNotifications, showNotificationToast]);
 
   const markAsRead = async (id: string) => {
     // Optimistically update UI
@@ -174,20 +206,46 @@ export function useNotifications() {
     }
 
     try {
-      await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', id);
+      
+      if (error) {
+        console.error('Failed to mark notification as read:', error);
+        // Revert optimistic update on error
+        setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: false } : n)));
+      }
     } catch (e) {
       console.error('Failed to mark notification read', e);
     }
   };
 
   const markAllRead = async () => {
+    const unreadNonDemo = notifications.filter((n) => !n.is_read && !n.id.startsWith('demo'));
+    const unreadIds = unreadNonDemo.map((n) => n.id);
+    
     // Optimistically update UI
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
 
+    if (unreadIds.length === 0) return;
+
     try {
-      const unreadIds = notifications.filter((n) => !n.is_read && !n.id.startsWith('demo')).map((n) => n.id);
-      if (unreadIds.length === 0) return;
-      await supabase.from('notifications').update({ is_read: true }).in('id', unreadIds);
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .in('id', unreadIds);
+      
+      if (error) {
+        console.error('Failed to mark all as read:', error);
+        // Revert optimistic update on error
+        setNotifications((prev) => 
+          prev.map((n) => {
+            const wasUnread = unreadIds.includes(n.id);
+            return wasUnread ? { ...n, is_read: false } : n;
+          })
+        );
+      }
     } catch (e) {
       console.error('Failed to mark all read', e);
     }

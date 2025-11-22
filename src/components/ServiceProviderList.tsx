@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { ChevronUp, MapPin, Star, Phone, DollarSign } from "lucide-react";
+import { ChevronUp, MapPin, Star, Phone, DollarSign, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 
 type BaseItem = {
   id?: string;
@@ -37,6 +38,7 @@ const ServiceProviderList = ({ services }: ServiceProviderListProps) => {
   const [fullyExpanded, setFullyExpanded] = useState(false);
   const [selectedItem, setSelectedItem] = useState<BaseItem | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const listRef = useRef<HTMLDivElement | null>(null);
   const sheetRef = useRef<HTMLDivElement | null>(null);
   const touchStartY = useRef<number>(0);
@@ -66,13 +68,29 @@ const ServiceProviderList = ({ services }: ServiceProviderListProps) => {
         byVendor[key].services!.push({ ...(s as BaseItem) });
       });
 
-      return Object.values(byVendor);
-    }
+    return Object.values(byVendor);
+  }
 
-    return services.map((s) => ({ ...s, type: 'service' }));
-  }, [services, useDemo]);
+  return services.map((s) => ({ ...s, type: 'service' }));
+}, [services, useDemo]);
 
-  const handleItemClick = (item: BaseItem) => {
+// Filter providers based on search query
+const filteredProviders = useMemo(() => {
+  if (!searchQuery.trim()) return allProviders;
+  
+  const query = searchQuery.toLowerCase();
+  return allProviders.filter((item) => {
+    const businessName = (item.business_name || '').toLowerCase();
+    const title = (item.title || '').toLowerCase();
+    const description = (item.description || '').toLowerCase();
+    const category = (item.category || '').toLowerCase();
+    
+    return businessName.includes(query) || 
+           title.includes(query) || 
+           description.includes(query) ||
+           category.includes(query);
+  });
+}, [allProviders, searchQuery]);  const handleItemClick = (item: BaseItem) => {
     setSelectedItem(item);
     setDetailsOpen(true);
 
@@ -164,10 +182,10 @@ const ServiceProviderList = ({ services }: ServiceProviderListProps) => {
           className="p-4 sm:p-6 pb-3 sm:pb-4 cursor-pointer touch-none"
           onClick={() => !isExpanded && setIsExpanded(true)}
         >
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex-1 min-w-0">
               <h2 className="text-lg sm:text-xl font-bold truncate">Nearby Providers</h2>
-              <p className="text-xs sm:text-sm text-muted-foreground">{allProviders.length} services near you</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">{filteredProviders.length} services near you</p>
 
               {!isExpanded && allProviders.length > 0 && (
                 <div className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
@@ -198,18 +216,30 @@ const ServiceProviderList = ({ services }: ServiceProviderListProps) => {
               />
             </Button>
           </div>
+
+          {/* Search Bar - Always visible */}
+          <div className="relative" onClick={(e) => e.stopPropagation()}>
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              type="text"
+              placeholder="Search services or vendors..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-4 py-2 w-full text-sm"
+            />
+          </div>
         </div>
 
         {/* Provider List - only render when expanded */}
         {isExpanded && (
-          <div ref={listRef} className="overflow-y-auto h-[calc(100%-100px)] px-3 sm:px-6 pb-6 space-y-2 sm:space-y-3">
-            {allProviders.length === 0 ? (
+          <div ref={listRef} className="overflow-y-auto h-[calc(100%-160px)] px-3 sm:px-6 pb-6 space-y-2 sm:space-y-3">
+            {filteredProviders.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <MapPin className="h-12 w-12 mb-2 opacity-50" />
-                <p>No providers found nearby</p>
+                <p>{searchQuery ? 'No matching providers found' : 'No providers found nearby'}</p>
               </div>
               ) : (
-                allProviders.map((item: BaseItem) => (
+                filteredProviders.map((item: BaseItem) => (
                 item.type === 'vendor' ? (
                   <Card key={item.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleItemClick(item)}>
                     <CardContent className="p-3 sm:p-4">
