@@ -116,18 +116,22 @@ const ServiceProviderList = ({ services, events }: ServiceProviderListProps) => 
       {/* Bottom Sheet */}
       <div
         className={cn(
-          "fixed bottom-0 left-0 right-0 bg-card border-t border-border rounded-t-3xl shadow-2xl transition-all duration-300 z-40",
+          "fixed bottom-0 left-0 right-0 bg-card border-t border-border rounded-t-3xl shadow-2xl transition-all duration-300 z-40 overflow-hidden pointer-events-auto",
           isExpanded ? (fullyExpanded ? "h-screen" : "h-[70vh]") : "h-[84px]"
         )}
       >
         {/* Drag Handle */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="absolute top-2 left-1/2 transform -translate-x-1/2 w-12 h-1.5 bg-muted-foreground/30 rounded-full hover:bg-muted-foreground/50 transition-colors"
+          className="absolute top-2 left-1/2 transform -translate-x-1/2 w-12 h-1.5 bg-muted-foreground/30 rounded-full hover:bg-muted-foreground/50 transition-colors z-50"
+          aria-label="Toggle nearby providers"
         />
 
-        {/* Header */}
-        <div className="p-4 sm:p-6 pb-3 sm:pb-4">
+        {/* Header - clickable to expand */}
+        <div 
+          className="p-4 sm:p-6 pb-3 sm:pb-4 cursor-pointer"
+          onClick={() => !isExpanded && setIsExpanded(true)}
+        >
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <h2 className="text-lg sm:text-xl font-bold truncate">Nearby Providers</h2>

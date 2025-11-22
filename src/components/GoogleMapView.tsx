@@ -1,12 +1,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { GoogleMap, useLoadScript, Marker, InfoWindow, Circle } from '@react-google-maps/api';
+import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api';
 import { generateNearbyDemoVendors } from '@/data/demoVendors';
 import { calculateDistance } from '@/lib/proximity';
 import { Loader2 } from 'lucide-react';
+import AnimatedMarker from './AnimatedMarker';
+import RadarPulse from './RadarPulse';
 
 interface Vendor {
   id: string;
   business_name?: string;
+  category?: string;
   location_lat?: number;
   location_lng?: number;
   lat?: number;
@@ -132,54 +135,39 @@ const GoogleMapView = ({ userLocation, radiusKm = 5 }: GoogleMapViewProps) => {
       onUnmount={onUnmount}
       options={mapOptions}
     >
-      {/* User location marker (blue) */}
+      {/* Radar pulse from user location */}
+      <RadarPulse center={userLocation} maxRadius={radiusKm * 1000} />
+
+      {/* User location marker with pulsing effect */}
       <Marker
         position={userLocation}
         icon={{
           path: google.maps.SymbolPath.CIRCLE,
-          scale: 10,
+          scale: 12,
           fillColor: '#3B82F6',
           fillOpacity: 1,
           strokeColor: '#FFFFFF',
-          strokeWeight: 3,
+          strokeWeight: 4,
         }}
         title="You are here"
+        animation={google.maps.Animation.BOUNCE}
       />
 
-      {/* Proximity circle */}
-      <Circle
-        center={userLocation}
-        radius={radiusKm * 1000} // Convert km to meters
-        options={{
-          fillColor: '#3B82F6',
-          fillOpacity: 0.1,
-          strokeColor: '#3B82F6',
-          strokeOpacity: 0.3,
-          strokeWeight: 2,
-        }}
-      />
-
-      {/* Vendor markers (red) */}
-      {vendors.map((vendor) => {
+      {/* Animated vendor markers */}
+      {vendors.map((vendor, index) => {
         const lat = vendor.lat;
         const lng = vendor.lng;
 
         if (!lat || !lng) return null;
 
         return (
-          <Marker
+          <AnimatedMarker
             key={vendor.id}
             position={{ lat, lng }}
-            icon={{
-              path: google.maps.SymbolPath.CIRCLE,
-              scale: 8,
-              fillColor: '#EF4444',
-              fillOpacity: 1,
-              strokeColor: '#FFFFFF',
-              strokeWeight: 2,
-            }}
+            category={vendor.category}
             title={vendor.business_name}
             onClick={() => setSelectedVendor(vendor)}
+            delay={index * 200} // Stagger appearance
           />
         );
       })}
