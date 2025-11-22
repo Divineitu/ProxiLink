@@ -12,6 +12,9 @@ import Onboarding from "./pages/Onboarding";
 import RoleSelection from "./pages/RoleSelection";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 // Lazy load dashboard and feature pages
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -56,18 +59,20 @@ const App = () => (
             <Route path="/role-selection" element={<RoleSelection />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/vendor/dashboard" element={<VendorDashboard />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/vendor/dashboard" element={<ProtectedRoute requiredRole="vendor"><VendorDashboard /></ProtectedRoute>} />
             <Route path="/services" element={<ServiceList />} />
-            <Route path="/service/create" element={<ServiceCreate />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/payments" element={<Payments />} />
-            <Route path="/orders" element={<Orders />} />
-            <Route path="/notifications" element={<NotificationsPage />} />
-            <Route path="/messages" element={<Messages />} />
+            <Route path="/service/create" element={<ProtectedRoute requiredRole="vendor"><ServiceCreate /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
+            <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+            <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
             <Route path="/about" element={<About />} />
             <Route path="/support" element={<Support />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/dashboard" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
             <Route path="/service/:id" element={<ServiceProfile />} />
             <Route path="/api-diagnostic" element={<ApiKeyDiagnostic />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
