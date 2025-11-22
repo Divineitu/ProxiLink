@@ -123,7 +123,7 @@ const GoogleMapView = ({ userLocation, radiusKm = 5 }: GoogleMapViewProps) => {
     zoomControl: true,
     streetViewControl: false,
     mapTypeControl: false,
-    fullscreenControl: true,
+    fullscreenControl: false, // Removed fullscreen control
     gestureHandling: 'greedy', // Allow one-finger panning on mobile
   };
 

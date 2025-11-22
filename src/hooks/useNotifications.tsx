@@ -24,7 +24,7 @@ export function useNotifications() {
   const toastRootRef = useRef<any>(null);
 
   // Function to show custom toast
-  const showNotificationToast = useCallback((title: string, content: string) => {
+  const showNotificationToast = useCallback((title: string, content: string, onClick?: () => void) => {
     // Create container if it doesn't exist
     if (!toastContainerRef.current) {
       toastContainerRef.current = document.createElement('div');
@@ -39,6 +39,7 @@ export function useNotifications() {
         title={title}
         content={content}
         duration={6000} // 6 seconds
+        onClick={onClick}
         onDismiss={() => {
           toastRootRef.current?.render(null);
         }}
@@ -92,9 +93,9 @@ export function useNotifications() {
       clearInterval(demoTimerRef.current);
     }
 
-    // Generate a new notification every 30-60 seconds
+    // Generate a new notification every 35-55 seconds
     const scheduleNextNotification = () => {
-      const delay = Math.floor(Math.random() * 30000) + 30000; // 30-60 seconds
+      const delay = Math.floor(Math.random() * 20000) + 35000; // 35-55 seconds
       
       demoTimerRef.current = setTimeout(() => {
         const nextNotification = incomingDemoNotifications[notificationIndexRef.current % incomingDemoNotifications.length];
@@ -105,7 +106,15 @@ export function useNotifications() {
         };
 
         setNotifications((prev) => [newNotification, ...prev]);
-        showNotificationToast(newNotification.title, newNotification.content);
+        showNotificationToast(
+          newNotification.title, 
+          newNotification.content,
+          () => {
+            // Open notification center when clicked
+            const event = new CustomEvent('openNotificationCenter');
+            window.dispatchEvent(event);
+          }
+        );
 
         notificationIndexRef.current += 1;
         scheduleNextNotification(); // Schedule the next one
@@ -133,6 +142,26 @@ export function useNotifications() {
         }
         const userId = session.user.id;
 
+        // Show welcome notification immediately on login
+        const welcomeNotification: NotificationRow = {
+          id: `welcome-${Date.now()}`,
+          user_id: userId,
+          title: '🎉 Special ProxiLink Offers!',
+          content: 'Get exclusive discounts on premium services today. Check out our latest deals and save up to 30%!',
+          notification_type: 'promotion',
+          is_read: false,
+          created_at: new Date().toISOString(),
+        };
+        setNotifications((prev) => [welcomeNotification, ...prev]);
+        showNotificationToast(
+          welcomeNotification.title,
+          welcomeNotification.content,
+          () => {
+            const event = new CustomEvent('openNotificationCenter');
+            window.dispatchEvent(event);
+          }
+        );
+
         // Use Supabase v2 Realtime `channel` API to subscribe to notifications for the user
         const channel = supabase
           .channel(`notifications:${userId}`)
@@ -143,7 +172,14 @@ export function useNotifications() {
               const newRow = payload.new as NotificationRow;
               if (!mounted || !newRow) return;
               setNotifications((prev) => [newRow, ...prev]);
-              showNotificationToast(newRow.title, newRow.content);
+              showNotificationToast(
+                newRow.title, 
+                newRow.content,
+                () => {
+                  const event = new CustomEvent('openNotificationCenter');
+                  window.dispatchEvent(event);
+                }
+              );
             }
           )
           .subscribe();

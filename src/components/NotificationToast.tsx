@@ -6,13 +6,15 @@ interface NotificationToastProps {
   title: string;
   content: string;
   onDismiss: () => void;
+  onClick?: () => void;
   duration?: number; // in milliseconds
 }
 
 const NotificationToast: React.FC<NotificationToastProps> = ({ 
   title, 
   content, 
-  onDismiss, 
+  onDismiss,
+  onClick, 
   duration = 6000 // 6 seconds default
 }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -71,13 +73,19 @@ const NotificationToast: React.FC<NotificationToastProps> = ({
       )}
     >
       <div
-        className="max-w-md mx-auto bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-2xl pointer-events-auto transform transition-transform"
+        className="max-w-md mx-auto bg-gradient-to-br from-primary via-primary-glow to-secondary rounded-xl shadow-2xl pointer-events-auto transform transition-transform cursor-pointer hover:shadow-3xl"
         style={{
           transform: `translateY(-${swipeOffset}px)`,
         }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onClick={() => {
+          if (onClick) {
+            onClick();
+            handleDismiss();
+          }
+        }}
       >
         <div className="p-4 pr-12 relative">
           {/* Swipe indicator */}

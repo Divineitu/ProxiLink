@@ -52,6 +52,13 @@ export const demoNotifications: NotificationRow[] = [
 export const incomingDemoNotifications: Omit<NotificationRow, 'id' | 'created_at'>[] = [
   {
     user_id: 'demo',
+    title: '🎉 Exclusive ProxiLink Discounts!',
+    content: 'Limited time offer: Save up to 30% on premium services. Check out our featured vendors today!',
+    notification_type: 'promotion',
+    is_read: false,
+  },
+  {
+    user_id: 'demo',
     title: '🚗 New Vendor Near You',
     content: 'Quick Fix Auto Services just joined ProxiLink 500m from your location.',
     notification_type: 'proximity',

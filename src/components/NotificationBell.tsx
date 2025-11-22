@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,18 @@ import useNotifications from '@/hooks/useNotifications';
 const NotificationBell: React.FC = () => {
   const [open, setOpen] = useState(false);
   const { unreadCount } = useNotifications();
+
+  // Listen for custom event to open notification center
+  useEffect(() => {
+    const handleOpenNotificationCenter = () => {
+      setOpen(true);
+    };
+
+    window.addEventListener('openNotificationCenter', handleOpenNotificationCenter);
+    return () => {
+      window.removeEventListener('openNotificationCenter', handleOpenNotificationCenter);
+    };
+  }, []);
 
   return (
     <div>
