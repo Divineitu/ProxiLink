@@ -431,9 +431,37 @@ const filteredProviders = useMemo(() => {
                       variant="outline" 
                       className="w-full" 
                       size="lg"
-                      onClick={() => {
-                        toast.success('Opening chat...');
-                        setTimeout(() => navigate('/messages'), 500);
+                      onClick={async () => {
+                        try {
+                          const vendorId = selectedItem.type === 'vendor' 
+                            ? selectedItem.id 
+                            : (selectedItem.vendor_id || selectedItem.vendor_profiles?.user_id);
+                          const vendorName = selectedItem.type === 'vendor'
+                            ? selectedItem.business_name
+                            : (selectedItem.vendor_profiles?.business_name || 'Vendor');
+
+                          if (!vendorId) {
+                            toast.error('Vendor information not available');
+                            return;
+                          }
+
+                          toast.success(`Opening chat with ${vendorName}...`);
+                          setDetailsOpen(false);
+                          
+                          // Navigate to messages with vendor info in state
+                          setTimeout(() => {
+                            navigate('/messages', { 
+                              state: { 
+                                vendorId,
+                                vendorName,
+                                serviceId: selectedItem.id
+                              } 
+                            });
+                          }, 500);
+                        } catch (error) {
+                          console.error('Error opening chat:', error);
+                          toast.error('Failed to open chat');
+                        }
                       }}
                     >
                       <MessageSquare className="h-4 w-4 mr-2" />
@@ -444,7 +472,60 @@ const filteredProviders = useMemo(() => {
                       className="w-full" 
                       size="lg"
                       onClick={() => {
-                        toast.success('Calling vendor...');
+                        const vendorName = selectedItem.type === 'vendor'
+                          ? selectedItem.business_name
+                          : (selectedItem.vendor_profiles?.business_name || 'Vendor');
+                        const vendorPhone = selectedItem.profiles?.phone || selectedItem.vendor_profiles?.phone || '+234 XXX XXX XXXX';
+                        
+                        // Show call dialog
+                        const callDialog = document.createElement('div');
+                        callDialog.innerHTML = `
+                          <div class="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+                            <div class="bg-card rounded-xl shadow-2xl p-6 max-w-sm w-full">
+                              <h3 class="text-xl font-bold mb-4">Call ${vendorName}</h3>
+                              <p class="text-sm text-muted-foreground mb-6">Choose how you'd like to contact this vendor:</p>
+                              <div class="space-y-3">
+                                <button class="w-full bg-primary text-primary-foreground hover:bg-primary/90 py-3 rounded-lg font-medium" id="voice-call">
+                                  📞 Voice Call
+                                </button>
+                                <button class="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 py-3 rounded-lg font-medium" id="video-call">
+                                  📹 Video Call
+                                </button>
+                                <button class="w-full border border-border hover:bg-muted py-3 rounded-lg font-medium" id="phone-call">
+                                  ☎️ Phone Call (${vendorPhone})
+                                </button>
+                                <button class="w-full text-muted-foreground hover:text-foreground py-2" id="cancel-call">
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        `;
+                        document.body.appendChild(callDialog);
+                        
+                        const handleVoiceCall = () => {
+                          document.body.removeChild(callDialog);
+                          navigate('/call', { state: { type: 'voice', vendorName, vendorId: selectedItem.id } });
+                        };
+                        
+                        const handleVideoCall = () => {
+                          document.body.removeChild(callDialog);
+                          navigate('/call', { state: { type: 'video', vendorName, vendorId: selectedItem.id } });
+                        };
+                        
+                        const handlePhoneCall = () => {
+                          document.body.removeChild(callDialog);
+                          window.location.href = `tel:${vendorPhone}`;
+                        };
+                        
+                        const handleCancel = () => {
+                          document.body.removeChild(callDialog);
+                        };
+                        
+                        callDialog.querySelector('#voice-call')?.addEventListener('click', handleVoiceCall);
+                        callDialog.querySelector('#video-call')?.addEventListener('click', handleVideoCall);
+                        callDialog.querySelector('#phone-call')?.addEventListener('click', handlePhoneCall);
+                        callDialog.querySelector('#cancel-call')?.addEventListener('click', handleCancel);
                       }}
                     >
                       <Phone className="h-4 w-4 mr-2" />

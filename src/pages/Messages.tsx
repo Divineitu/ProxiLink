@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import demoMessages from '@/data/demoMessages';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,6 +37,7 @@ interface Message {
 
 const Messages = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
@@ -57,6 +58,95 @@ const Messages = () => {
       if (typeof cleanup === 'function') cleanup();
     };
   }, []);
+
+  // Handle incoming vendor info from navigation state
+  useEffect(() => {
+    if (location.state && location.state.vendorId && currentUserId) {
+      handleCreateOrFindConversation(
+        location.state.vendorId,
+        location.state.vendorName,
+        location.state.serviceId
+      );
+      // Clear the state after handling
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, currentUserId]);
+
+  const handleCreateOrFindConversation = async (
+    vendorId: string,
+    vendorName: string,
+    serviceId?: string
+  ) => {
+    try {
+      // Check if conversation already exists
+      const existingConv = conversations.find(
+        (c) => c.vendor_id === vendorId || c.user_id === vendorId
+      );
+
+      if (existingConv) {
+        // Select existing conversation
+        setSelectedConversation(existingConv);
+        await fetchMessages(existingConv.id);
+        toast.success(`Opened chat with ${vendorName}`);
+        return;
+      }
+
+      // Create new conversation
+      const { data, error } = await supabase
+        .from('conversations' as any)
+        .insert({
+          user_id: currentUserId,
+          vendor_id: vendorId,
+          service_id: serviceId,
+          last_message_at: new Date().toISOString(),
+        })
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      // Fetch vendor profile
+      const { data: vendorProfile } = await supabase
+        .from('profiles')
+        .select('id, full_name, phone')
+        .eq('id', vendorId)
+        .single();
+
+      const newConv: Conversation = {
+        ...data,
+        other_user: vendorProfile || { id: vendorId, full_name: vendorName },
+        unread_count: 0,
+      };
+
+      setConversations((prev) => [newConv, ...prev]);
+      setSelectedConversation(newConv);
+      setMessages([]);
+      toast.success(`Started chat with ${vendorName}`);
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      
+      // Demo mode fallback
+      const demoConv: Conversation = {
+        id: `demo-conv-${Date.now()}`,
+        user_id: currentUserId,
+        vendor_id: vendorId,
+        service_id: serviceId,
+        last_message_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        other_user: {
+          id: vendorId,
+          full_name: vendorName,
+          phone: '+234 XXX XXX XXXX',
+        },
+        unread_count: 0,
+      };
+
+      setConversations((prev) => [demoConv, ...prev]);
+      setSelectedConversation(demoConv);
+      setMessages([]);
+      toast.success(`Started chat with ${vendorName} (demo mode)`);
+    }
+  };
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();

@@ -28,6 +28,7 @@ const Payments = lazy(() => import("./pages/Payments"));
 const Orders = lazy(() => import("./pages/Orders"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const Messages = lazy(() => import("./pages/Messages"));
+const Call = lazy(() => import("./pages/Call"));
 const About = lazy(() => import("./pages/About"));
 const Support = lazy(() => import("./pages/Support"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -69,6 +70,7 @@ const App = () => (
             <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
             <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+            <Route path="/call" element={<ProtectedRoute><Call /></ProtectedRoute>} />
             <Route path="/about" element={<About />} />
             <Route path="/support" element={<Support />} />
             <Route path="/admin/dashboard" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
