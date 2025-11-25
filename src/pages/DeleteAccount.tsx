@@ -133,7 +133,7 @@ const DeleteAccount = () => {
             <div className="flex gap-3 pt-4">
               <Button
                 variant="outline"
-                onClick={() => navigate('/profile')}
+                onClick={() => navigate(-1)}
                 className="flex-1 min-h-[44px]"
               >
                 Cancel

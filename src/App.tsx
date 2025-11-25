@@ -18,6 +18,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 // Lazy load dashboard and feature pages
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const VendorDashboard = lazy(() => import("./pages/VendorDashboard"));
+const VendorProfile = lazy(() => import("./pages/VendorProfile"));
+const VendorSettings = lazy(() => import("./pages/VendorSettings"));
 const ServiceCreate = lazy(() => import("./pages/ServiceCreate"));
 const ServiceList = lazy(() => import("./pages/ServiceList"));
 const ApiKeyDiagnostic = lazy(() => import("./pages/ApiKeyDiagnostic"));
@@ -67,6 +69,8 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/vendor/dashboard" element={<ProtectedRoute requiredRole="vendor"><VendorDashboard /></ProtectedRoute>} />
+            <Route path="/vendor/settings" element={<ProtectedRoute requiredRole="vendor"><VendorSettings /></ProtectedRoute>} />
+            <Route path="/vendor/:id" element={<VendorProfile />} />
             <Route path="/services" element={<ServiceList />} />
             <Route path="/service/create" element={<ProtectedRoute requiredRole="vendor"><ServiceCreate /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

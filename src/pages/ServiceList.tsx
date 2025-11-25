@@ -171,23 +171,45 @@ const ServiceList = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <p className="text-sm text-muted-foreground">{s.description}</p>
-                  <div className="text-xs text-muted-foreground border-t pt-3">
-                    <p className="font-medium mb-1">
-                      {String(s.vendor?.business_name ?? s.vendor_profiles?.business_name ?? 'Unknown Vendor')}
-                    </p>
-                    <p className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      Lat: {s.location_lat?.toFixed(4)}, Lng: {s.location_lng?.toFixed(4)}
-                    </p>
+                  <p className="text-sm text-muted-foreground line-clamp-2">{s.description}</p>
+                  <div className="text-xs border-t pt-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-muted-foreground">Vendor:</span>
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="h-auto p-0 text-sm font-semibold"
+                        onClick={() => {
+                          const vendorId = s.vendor_profiles?.id || s.vendor?.id;
+                          if (vendorId) navigate(`/vendor/${vendorId}`);
+                        }}
+                      >
+                        {String(s.vendor?.business_name ?? s.vendor_profiles?.business_name ?? 'Unknown Vendor')}
+                      </Button>
+                    </div>
+                    {s.location_lat && s.location_lng && (
+                      <p className="flex items-center gap-1 text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        <span>Location: {s.location_lat.toFixed(4)}, {s.location_lng.toFixed(4)}</span>
+                      </p>
+                    )}
                   </div>
-                  <Button
-                    size="sm"
-                    onClick={() => handleCenterMap(s)}
-                    className="w-full mt-2"
-                  >
-                    View on Map
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => navigate(`/service/${s.id}`)}
+                      className="flex-1"
+                    >
+                      View Details
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCenterMap(s)}
+                    >
+                      <MapPin className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}

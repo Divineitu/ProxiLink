@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Package, TrendingUp, MapPin, LogOut, BarChart3, Eye, Users, Zap } from "lucide-react";
+import { Plus, Package, TrendingUp, MapPin, LogOut, BarChart3, Eye, Users, Zap, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const VendorDashboard = () => {
@@ -375,7 +375,7 @@ const VendorDashboard = () => {
             </Card>
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Add New Service</CardTitle>
@@ -385,6 +385,19 @@ const VendorDashboard = () => {
                   <Button onClick={() => { setActiveTab('services'); setShowCreateForm(true); }} className="w-full">
                     <Plus className="h-4 w-4 mr-2" />
                     Create Service
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Business Settings</CardTitle>
+                  <CardDescription>Update your profile</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button onClick={() => navigate('/vendor/settings')} variant="outline" className="w-full">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Edit Profile
                   </Button>
                 </CardContent>
               </Card>
