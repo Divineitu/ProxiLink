@@ -1,8 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import demoServices from '@/data/demoServices';
-import demoVendors from '@/data/demoVendors';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -53,7 +51,7 @@ const ServiceProfile = () => {
 
       // Check if conversation already exists
       const { data: existingConv } = await supabase
-        .from('conversations' as any)
+        .from('conversations')
         .select('id')
         .eq('user_id', user.id)
         .eq('vendor_id', vendorId)
@@ -67,7 +65,7 @@ const ServiceProfile = () => {
 
       // Create new conversation
       const { data: newConv, error } = await supabase
-        .from('conversations' as any)
+        .from('conversations')
         .insert({
           user_id: user.id,
           vendor_id: vendorId,
@@ -87,22 +85,6 @@ const ServiceProfile = () => {
   };
 
   const fetchServiceDetails = useCallback(async () => {
-    const useDemo = import.meta.env.VITE_USE_DEMO_VENDORS === 'true';
-    if (useDemo) {
-      const demo = demoServices.find((d: unknown) => (d as unknown as { id?: string }).id === id);
-      if (demo) {
-        type Vendor = { id?: string; business_name?: string; profiles?: { full_name?: string } };
-        const vendor = (demoVendors.find((v: unknown) => (v as unknown as { id?: string }).id === (demo as unknown as { vendor_id?: string }).vendor_id) || ({} as Vendor)) as Vendor;
-        setVendorId((demo as unknown as { vendor_id?: string }).vendor_id || null);
-        setService({
-          ...(demo as unknown as Service),
-          vendor_profiles: { business_name: vendor.business_name },
-          profiles: { full_name: vendor.profiles?.full_name },
-        });
-        setLoading(false);
-        return;
-      }
-    }
     const { data, error } = await supabase
       .from("services")
       .select(`

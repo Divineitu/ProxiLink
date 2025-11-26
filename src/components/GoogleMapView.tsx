@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api';
-import { generateNearbyDemoVendors } from '@/data/demoVendors';
+import { GoogleMap, useLoadScript, Marker, InfoWindow, Libraries } from '@react-google-maps/api';
 import { calculateDistance } from '@/lib/proximity';
 import { Loader2 } from 'lucide-react';
 import AnimatedMarker from './AnimatedMarker';
 import RadarPulse from './RadarPulse';
+
+const libraries: Libraries = ['places'];
 
 interface Vendor {
   id: string;
@@ -40,6 +41,8 @@ const GoogleMapView = ({ userLocation, radiusKm = 5 }: GoogleMapViewProps) => {
 
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY || '',
+    libraries,
+    preventGoogleFontsLoading: false,
   });
 
   // Log any load errors
@@ -61,31 +64,9 @@ const GoogleMapView = ({ userLocation, radiusKm = 5 }: GoogleMapViewProps) => {
   useEffect(() => {
     if (!userLocation) return;
 
-    const useDemoVendors = import.meta.env.VITE_USE_DEMO_VENDORS === 'true';
-
-    if (useDemoVendors) {
-      const nearbyVendors = generateNearbyDemoVendors(userLocation.lat, userLocation.lng, 12);
-      
-      // Calculate distances and filter by radius
-      const vendorsWithDistance = nearbyVendors.map((vendor) => {
-        const lat = vendor.profiles?.location_lat;
-        const lng = vendor.profiles?.location_lng;
-
-        if (!lat || !lng) return { ...vendor, distance: Infinity };
-
-        const distance = calculateDistance(
-          userLocation.lat,
-          userLocation.lng,
-          lat,
-          lng
-        );
-
-        return { ...vendor, distance, lat, lng };
-      }).filter(v => v.distance !== Infinity && v.distance! <= radiusKm);
-
-      setVendors(vendorsWithDistance);
-      console.log(`✅ Loaded ${vendorsWithDistance.length} demo vendors on Google Maps`);
-    }
+    // TODO: Fetch real vendors from database based on user location
+    // For now, set empty array until vendor location data is populated
+    setVendors([]);
   }, [userLocation, radiusKm]);
 
   if (loadError) {
@@ -95,8 +76,11 @@ const GoogleMapView = ({ userLocation, radiusKm = 5 }: GoogleMapViewProps) => {
         <p className="text-sm text-gray-600 text-center max-w-md">
           {loadError.message || 'Failed to load Google Maps API'}
         </p>
-        <p className="text-xs text-gray-500 mt-2">
-          Check browser console for details
+        <p className="text-xs text-gray-500 mt-4 text-center">
+          Please check: <br/>
+          1. Google Maps JavaScript API is enabled in your Google Cloud Console<br/>
+          2. API key is valid and has proper restrictions<br/>
+          3. Billing is enabled for the project
         </p>
       </div>
     );

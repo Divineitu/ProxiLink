@@ -52,7 +52,7 @@ const VendorSettings = () => {
 
       const { data, error } = await supabase
         .from('vendor_profiles')
-        .select('*')
+        .select('*, profiles(phone, location_lat, location_lng)')
         .eq('user_id', user.id)
         .single();
 
@@ -64,9 +64,9 @@ const VendorSettings = () => {
           business_name: data.business_name || '',
           category: data.category || '',
           description: data.description || '',
-          phone: data.phone || '',
-          location_lat: data.location_lat?.toString() || '',
-          location_lng: data.location_lng?.toString() || ''
+          phone: (data.profiles as any)?.phone || '',
+          location_lat: (data.profiles as any)?.location_lat?.toString() || '',
+          location_lng: (data.profiles as any)?.location_lng?.toString() || ''
         });
       }
     } catch (error) {
@@ -85,20 +85,33 @@ const VendorSettings = () => {
 
     setSaving(true);
     try {
-      const { error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Update vendor_profiles
+      const { error: vendorError } = await supabase
         .from('vendor_profiles')
         .update({
           business_name: vendorData.business_name,
           category: vendorData.category,
           description: vendorData.description,
-          phone: vendorData.phone,
+        })
+        .eq('id', vendorId);
+
+      if (vendorError) throw vendorError;
+
+      // Update profiles (phone and location)
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          phone: vendorData.phone || null,
           location_lat: vendorData.location_lat ? parseFloat(vendorData.location_lat) : null,
           location_lng: vendorData.location_lng ? parseFloat(vendorData.location_lng) : null,
           updated_at: new Date().toISOString()
         })
-        .eq('id', vendorId);
+        .eq('id', user.id);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
 
       toast.success('Vendor profile updated successfully!');
       setTimeout(() => navigate('/vendor/dashboard'), 1500);

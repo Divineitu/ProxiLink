@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import demoServices from '@/data/demoServices';
-import demoVendors from '@/data/demoVendors';
 import { supabase } from '@/integrations/supabase/client';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,21 +21,6 @@ const ServiceList = () => {
   const [categories, setCategories] = useState<string[]>([]);
 
   useEffect(() => {
-    const useDemo = import.meta.env.VITE_USE_DEMO_VENDORS === 'true';
-    if (useDemo) {
-      // join demo services with vendor info
-      const joined = demoServices.map((s: unknown) => {
-        const _s = s as unknown as ServiceItem & { vendor_id?: string };
-        const vendor = demoVendors.find((v: unknown) => (v as unknown as { id?: string }).id === _s.vendor_id) as Record<string, unknown> | undefined;
-        return { ..._s, vendor } as ServiceItem;
-      });
-      setAllServices(joined);
-      setServices(joined);
-      const cats = [...new Set(joined.map((s) => s.category))].filter(Boolean);
-      setCategories(cats as string[]);
-      return;
-    }
-
     const fetchServices = async () => {
       try {
         const { data, error } = await supabase.from('services').select('*, vendor_profiles(*)');

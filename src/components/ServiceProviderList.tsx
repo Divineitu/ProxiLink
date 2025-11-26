@@ -1,7 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import demoServices from '@/data/demoServices';
-import demoVendors from '@/data/demoVendors';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,34 +57,10 @@ const ServiceProviderList = ({ services, initialExpanded = false, onExpandChange
     }
   }, [initialExpanded, isExpanded, onExpandChange]);
 
-  const useDemo = import.meta.env.VITE_USE_DEMO_VENDORS === 'true';
-
-  // If demo mode, group demo services by vendor to show richer vendor cards
+  // Map services to display format
   const allProviders = useMemo(() => {
-    if (useDemo) {
-      // group demoServices by vendor
-      const byVendor: Record<string, BaseItem> = {};
-      demoServices.forEach((s: BaseItem) => {
-        const vendor = demoVendors.find((v: BaseItem) => v.id === s.vendor_id) || ({} as BaseItem);
-        const key = s.vendor_id ?? '';
-        if (!byVendor[key]) {
-          byVendor[key] = {
-            id: vendor.id || s.vendor_id,
-            business_name: vendor.business_name || 'Unknown Vendor',
-            profiles: vendor.profiles || {},
-            type: 'vendor',
-            services: [],
-          };
-        }
-        byVendor[key].services = byVendor[key].services || [];
-        byVendor[key].services!.push({ ...(s as BaseItem) });
-      });
-
-    return Object.values(byVendor);
-  }
-
-  return services.map((s) => ({ ...s, type: 'service' }));
-}, [services, useDemo]);
+    return services.map((s) => ({ ...s, type: 'service' }));
+  }, [services]);
 
 // Filter providers based on search query
 const filteredProviders = useMemo(() => {

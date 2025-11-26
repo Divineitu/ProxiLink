@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import demoMessages from '@/data/demoMessages';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,7 +44,6 @@ const Messages = () => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const messagesRef = useRef<HTMLDivElement | null>(null);
-  const [isTyping, setIsTyping] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [pendingMap, setPendingMap] = useState<Record<string, Message>>({});
 
@@ -93,7 +91,7 @@ const Messages = () => {
 
       // Create new conversation
       const { data, error } = await supabase
-        .from('conversations' as any)
+        .from('conversations')
         .insert({
           user_id: currentUserId,
           vendor_id: vendorId,
@@ -124,27 +122,7 @@ const Messages = () => {
       toast.success(`Started chat with ${vendorName}`);
     } catch (error) {
       console.error('Error creating conversation:', error);
-      
-      // Demo mode fallback
-      const demoConv: Conversation = {
-        id: `demo-conv-${Date.now()}`,
-        user_id: currentUserId,
-        vendor_id: vendorId,
-        service_id: serviceId,
-        last_message_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        other_user: {
-          id: vendorId,
-          full_name: vendorName,
-          phone: '+234 XXX XXX XXXX',
-        },
-        unread_count: 0,
-      };
-
-      setConversations((prev) => [demoConv, ...prev]);
-      setSelectedConversation(demoConv);
-      setMessages([]);
-      toast.success(`Started chat with ${vendorName} (demo mode)`);
+      toast.error('Failed to create conversation');
     }
   };
 
@@ -163,10 +141,10 @@ const Messages = () => {
       if (!user) return;
 
       const { data, error } = await supabase
-        .from('conversations' as any)
+        .from('conversations')
         .select(`
           *,
-          messages(id, is_read)
+          messages(id, is_read, sender_id)
         `)
         .or(`user_id.eq.${user.id},vendor_id.eq.${user.id}`)
         .order('last_message_at', { ascending: false });
@@ -194,14 +172,7 @@ const Messages = () => {
       setConversations(conversationsWithUsers as Conversation[]);
     } catch (error) {
       console.error('Error fetching conversations:', error);
-      // Fallback to demo conversations when running in demo mode or on failure
-      if (import.meta.env.VITE_USE_DEMO_VENDORS === 'true') {
-        const demoUserId = currentUserId || 'demo-user';
-        const demoConvs = demoMessages.generateDemoConversations(demoUserId);
-        setConversations(demoConvs as unknown as Conversation[]);
-      } else {
-        toast.error('Failed to load conversations');
-      }
+      toast.error('Failed to load conversations');
     } finally {
       setLoading(false);
     }
@@ -210,7 +181,7 @@ const Messages = () => {
   const fetchMessages = async (conversationId: string) => {
     try {
       const { data, error } = await supabase
-        .from('messages' as any)
+        .from('messages')
         .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
@@ -223,7 +194,7 @@ const Messages = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await supabase
-          .from('messages' as any)
+          .from('messages')
           .update({ is_read: true })
           .eq('conversation_id', conversationId)
           .neq('sender_id', user.id);
@@ -232,13 +203,7 @@ const Messages = () => {
       setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unread_count: 0 } : c)));
     } catch (error) {
       console.error('Error fetching messages:', error);
-      if (import.meta.env.VITE_USE_DEMO_VENDORS === 'true') {
-        const demoUserId = currentUserId || 'demo-user';
-        const demoMessagesData = demoMessages.generateDemoMessages(conversationId, demoUserId);
-        setMessages(demoMessagesData as unknown as Message[]);
-      } else {
-        toast.error('Failed to load messages');
-      }
+      toast.error('Failed to load messages');
     }
   };
 
@@ -248,16 +213,13 @@ const Messages = () => {
       // Optimistic UI update
       setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unread_count: 0 } : c)));
 
-      // If not in demo mode, persist read state
-      if (import.meta.env.VITE_USE_DEMO_VENDORS !== 'true') {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase
-            .from('messages' as any)
-            .update({ is_read: true })
-            .eq('conversation_id', conversationId)
-            .neq('sender_id', user.id);
-        }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('messages')
+          .update({ is_read: true })
+          .eq('conversation_id', conversationId)
+          .neq('sender_id', user.id);
       }
     } catch (err) {
       console.warn('Failed to mark conversation read', err);
@@ -305,21 +267,19 @@ const Messages = () => {
           // If the user is viewing the conversation, append and mark as read optimistically
           setMessages((prev) => [...prev, newMessage]);
 
-            if (newMessage.sender_id !== currentUserId) {
-            // mark as read in UI (match by id)
+          if (newMessage.sender_id !== currentUserId) {
+            // Mark as read in UI (match by id)
             setMessages((prev) => prev.map((m) => (m.id === newMessage.id ? { ...m, is_read: true } : m)));
             setConversations((prev) => prev.map((c) => (c.id === selectedConversation.id ? { ...c, unread_count: 0 } : c)));
 
-            // persist read state if not demo
-            if (import.meta.env.VITE_USE_DEMO_VENDORS !== 'true') {
-              supabase
-                .from('messages' as any)
-                .update({ is_read: true })
-                .eq('id', newMessage.id)
-                .then(({ error }) => {
-                  if (error) console.warn('Failed to mark incoming message read', error);
-                });
-            }
+            // Persist read state
+            supabase
+              .from('messages')
+              .update({ is_read: true })
+              .eq('id', newMessage.id)
+              .then(({ error }) => {
+                if (error) console.warn('Failed to mark incoming message read', error);
+              });
           }
         }
 
@@ -342,108 +302,48 @@ const Messages = () => {
     if (!newMessage.trim() || !selectedConversation) return;
 
     try {
-      // Demo-mode fallback: when running without Supabase/migrations applied,
-      // append message locally so the UI remains interactive.
-      if (import.meta.env.VITE_USE_DEMO_VENDORS === 'true') {
-        const demoMsg: Message = {
-          id: `local-${Date.now()}`,
-          conversation_id: selectedConversation.id,
-          sender_id: currentUserId || 'demo-user',
-          content: newMessage.trim(),
-          is_read: true,
-          created_at: new Date().toISOString(),
-        };
+      // Optimistic UI: add a pending message locally so the UI feels instant
+      const tempId = `pending-${Date.now()}`;
+      const pendingMsg: Message = {
+        id: tempId,
+        conversation_id: selectedConversation.id,
+        sender_id: currentUserId,
+        content: newMessage.trim(),
+        is_read: true,
+        created_at: new Date().toISOString(),
+        status: 'pending',
+      };
 
-        setMessages((prev) => [...prev, demoMsg]);
+      setMessages((prev) => [...prev, pendingMsg]);
+      setPendingMap((m) => ({ ...m, [tempId]: pendingMsg }));
+      setNewMessage('');
 
-        // Update conversations list last_message_at locally
-        setConversations((prev) => prev.map((c) => c.id === selectedConversation.id ? { ...c, last_message_at: demoMsg.created_at } : c));
-
-        setNewMessage('');
-        toast.success('Message sent (demo)');
-
-        // Simulate vendor typing and auto-reply in demo mode
-        setIsTyping(true);
-        const cannedReplies = [
-          'Thanks — I can help with that. When would you like the service?',
-          "Sure — I usually charge ₦5,000 for this. Interested?",
-          'Can you share more details about your request so I can prepare?',
-        ];
-        const reply = cannedReplies[Math.floor(Math.random() * cannedReplies.length)];
-        const vendorId = selectedConversation?.other_user?.id || (selectedConversation?.vendor_id as string) || 'demo-vendor-1';
-
-        setTimeout(() => {
-          const vendorMsg: Message = {
-            id: `local-reply-${Date.now()}`,
-            conversation_id: selectedConversation.id,
-            sender_id: vendorId,
-            content: reply,
-            is_read: false,
-            created_at: new Date().toISOString(),
-          };
-
-          setMessages((prev) => [...prev, vendorMsg]);
-          setConversations((prev) => prev.map((c) => c.id === selectedConversation.id ? { ...c, last_message_at: vendorMsg.created_at } : c));
-          setIsTyping(false);
-
-          // scroll to bottom after reply
-          setTimeout(() => {
-            if (messagesRef.current) messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
-          }, 50);
-        }, 1500);
-      } else {
-        // Optimistic UI: add a pending message locally so the UI feels instant
-        const tempId = `pending-${Date.now()}`;
-        const pendingMsg: Message = {
-          id: tempId,
+      setIsSending(true);
+      const { data, error } = await supabase
+        .from('messages')
+        .insert({
           conversation_id: selectedConversation.id,
           sender_id: currentUserId,
-          content: newMessage.trim(),
-          is_read: true,
-          created_at: new Date().toISOString(),
-          status: 'pending',
-        };
+          content: pendingMsg.content,
+        })
+        .select('*')
+        .single();
 
-        setMessages((prev) => [...prev, pendingMsg]);
-        setPendingMap((m) => ({ ...m, [tempId]: pendingMsg }));
-        setNewMessage('');
+      if (error) throw error;
 
-        try {
-          setIsSending(true);
-          const { data, error } = await supabase
-            .from('messages' as any)
-            .insert({
-              conversation_id: selectedConversation.id,
-              sender_id: currentUserId,
-              content: pendingMsg.content,
-            })
-            .select('*');
-
-          if (error) throw error;
-
-          // Supabase returns an array of inserted rows; take the first
-          const inserted = Array.isArray(data) ? data[0] : data;
-
-          // Replace pending message with server message
-          setMessages((prev) => prev.map((m) => (m.id === tempId ? ({ ...(inserted as any), status: 'sent' } as Message) : m)));
-          setPendingMap((m) => {
-            const copy = { ...m };
-            delete copy[tempId];
-            return copy;
-          });
-          toast.success('Message sent');
-        } catch (err) {
-          console.error('Error sending message:', err);
-          // mark pending as failed so user can retry
-          setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, status: 'failed' } : m)));
-          toast.error('Failed to send message — tap to retry');
-        } finally {
-          setIsSending(false);
-        }
-      }
-    } catch (error) {
-      console.error('Error sending message:', error);
+      // Replace pending message with server message
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...data, status: 'sent' } as Message : m)));
+      setPendingMap((m) => {
+        const copy = { ...m };
+        delete copy[tempId];
+        return copy;
+      });
+      toast.success('Message sent');
+    } catch (err) {
+      console.error('Error sending message:', err);
       toast.error('Failed to send message');
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -458,19 +358,18 @@ const Messages = () => {
     try {
       setIsSending(true);
       const { data, error } = await supabase
-        .from('messages' as any)
+        .from('messages')
         .insert({
           conversation_id: selectedConversation.id,
           sender_id: currentUserId,
           content: pending.content,
         })
-        .select('*');
+        .select('*')
+        .single();
 
       if (error) throw error;
 
-      const inserted = Array.isArray(data) ? data[0] : data;
-
-      setMessages((prev) => prev.map((m) => (m.id === pendingId ? ({ ...(inserted as any), status: 'sent' } as Message) : m)));
+      setMessages((prev) => prev.map((m) => (m.id === pendingId ? { ...data, status: 'sent' } as Message : m)));
       setPendingMap((m) => {
         const copy = { ...m };
         delete copy[pendingId];
@@ -684,13 +583,6 @@ const Messages = () => {
                             </div>
                           </div>
                         ))}
-
-                        {/* Typing indicator */}
-                        {isTyping && (
-                          <div className="flex justify-start">
-                            <div className="max-w-[70%] rounded-lg p-3 bg-muted text-sm">Vendor is typing…</div>
-                          </div>
-                        )}
                       </div>
                     )}
                     </div>
