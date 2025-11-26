@@ -124,7 +124,7 @@ const AdminDashboard = () => {
   }, []);
 
   const fetchAnalyticsData = useCallback(async () => {
-    // Fetch user growth data (last 7 days)
+    // get user growth for last 7 days
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     
@@ -145,7 +145,7 @@ const AdminDashboard = () => {
     });
     setChartData(growthData);
 
-    // Fetch vendor categories
+    // get vendor categories
     const { data: allVendors } = await supabase
       .from("vendor_profiles")
       .select("category");

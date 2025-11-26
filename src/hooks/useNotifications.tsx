@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { createRoot } from 'react-dom/client';
 import NotificationToast from '@/components/NotificationToast';
-import { demoNotifications, incomingDemoNotifications } from '@/data/demoNotifications';
 
 export interface NotificationRow {
   id: string;
@@ -191,9 +190,9 @@ export function useNotifications() {
             demoTimerRef.current = null;
           }
           try {
-            // supabase.removeChannel is the correct way to remove v2 channels
+            // remove channel properly
             if (typeof supabase.removeChannel === 'function') {
-              // removeChannel may be async; call it but don't await in cleanup
+              // call but don't wait (in cleanup)
               // @ts-ignore
               supabase.removeChannel(channel);
             } else if (typeof channel?.unsubscribe === 'function') {
@@ -228,10 +227,10 @@ export function useNotifications() {
   }, [fetchNotifications, startSpecialOfferNotification, showNotificationToast]);
 
   const markAsRead = async (id: string) => {
-    // Optimistically update UI
+    // update UI right away
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
     
-    // Don't attempt database update for session-based notifications
+    // skip DB update for session notifications
     if (id.startsWith('welcome-') || id.startsWith('special-offer-')) {
       return;
     }
@@ -244,7 +243,7 @@ export function useNotifications() {
       
       if (error) {
         console.error('Failed to mark notification as read:', error);
-        // Revert optimistic update on error
+        // undo if it fails
         setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: false } : n)));
       }
     } catch (e) {

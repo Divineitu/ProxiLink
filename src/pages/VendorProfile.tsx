@@ -63,7 +63,7 @@ const VendorProfile = () => {
 
   const fetchVendorData = async () => {
     try {
-      // Fetch vendor profile
+      // get vendor info
       const { data: vendorData, error: vendorError } = await supabase
         .from('vendor_profiles')
         .select(`
@@ -76,18 +76,19 @@ const VendorProfile = () => {
       if (vendorError) throw vendorError;
       setVendor(vendorData);
 
-      // Fetch vendor services
-      const { data: servicesData } = await supabase
+      // get vendor services
+      const { data: servicesData, error: servicesError } = await supabase
         .from('services')
-        .select('*')
-        .eq('vendor_id', id)
+        .select('id, title, description, price, category, status, created_at')
+        .eq('user_id', id)
         .order('created_at', { ascending: false })
         .limit(10);
 
-      setServices(servicesData || []);
+      if (!servicesError && servicesData) {
+        setServices(servicesData as Service[]);
+      }
 
-      // TODO: Fetch reviews when review system is implemented
-      // For now, use demo reviews
+      // will add reviews later
       setReviews([]);
     } catch (error) {
       console.error('Error fetching vendor data:', error);

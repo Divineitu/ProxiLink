@@ -232,7 +232,7 @@ export function usePushNotifications() {
     if (!supported) return;
     if (subscribed) return;
 
-    // Attempt to subscribe, don't block render
+    // try to subscribe (non-blocking)
     (async () => {
       try {
         await subscribeToPushNotifications();

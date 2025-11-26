@@ -34,6 +34,7 @@ const ServiceProfile = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [vendorId, setVendorId] = useState<string | null>(null);
+  const [vendorPhone, setVendorPhone] = useState<string | null>(null);
 
   const startConversation = async () => {
     try {
@@ -89,7 +90,7 @@ const ServiceProfile = () => {
       .from("services")
       .select(`
         *,
-        profiles(full_name, avatar_url),
+        profiles(full_name, avatar_url, phone),
         vendor_profiles(business_name)
       `)
       .eq("id", id)
@@ -101,6 +102,7 @@ const ServiceProfile = () => {
     } else {
       setService(data);
       setVendorId((data as any).vendor_id || null);
+      setVendorPhone((data as any).profiles?.phone || null);
     }
     setLoading(false);
   }, [id, navigate]);
@@ -201,7 +203,19 @@ const ServiceProfile = () => {
             <MessageSquare className="h-5 w-5 mr-2" />
             Message
           </Button>
-          <Button size="lg" variant="outline" className="w-full">
+          <Button 
+            size="lg" 
+            variant="outline" 
+            className="w-full"
+            onClick={() => {
+              if (vendorPhone) {
+                window.location.href = `tel:${vendorPhone}`;
+              } else {
+                toast.error('Phone number not available');
+              }
+            }}
+            disabled={!vendorPhone}
+          >
             <Phone className="h-5 w-5 mr-2" />
             Call
           </Button>

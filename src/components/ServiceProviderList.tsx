@@ -46,7 +46,7 @@ const ServiceProviderList = ({ services, initialExpanded = false, onExpandChange
   const touchCurrentY = useRef<number>(0);
   const isDragging = useRef<boolean>(false);
 
-  // Effect to handle initial expansion
+  // handle initial expand state
   useEffect(() => {
     if (initialExpanded && !isExpanded) {
       setIsExpanded(true);
@@ -57,12 +57,12 @@ const ServiceProviderList = ({ services, initialExpanded = false, onExpandChange
     }
   }, [initialExpanded, isExpanded, onExpandChange]);
 
-  // Map services to display format
+  // convert services for display
   const allProviders = useMemo(() => {
     return services.map((s) => ({ ...s, type: 'service' }));
   }, [services]);
 
-// Filter providers based on search query
+// search filter
 const filteredProviders = useMemo(() => {
   if (!searchQuery.trim()) return allProviders;
   
@@ -82,7 +82,7 @@ const filteredProviders = useMemo(() => {
     setSelectedItem(item);
     setDetailsOpen(true);
 
-    // If the item has coordinates (vendor card in demo mode), dispatch a pan event for the map to handle
+    // check if item has coords and move map there
     const coords = item.profiles?.location_lat && item.profiles?.location_lng
       ? { lat: Number(item.profiles.location_lat), lng: Number(item.profiles.location_lng) }
       : item.vendor_profiles?.location_lat && item.vendor_profiles?.location_lng

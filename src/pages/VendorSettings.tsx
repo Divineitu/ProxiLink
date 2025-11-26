@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Save, Store } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -20,7 +21,8 @@ const VendorSettings = () => {
     description: '',
     phone: '',
     location_lat: '',
-    location_lng: ''
+    location_lng: '',
+    is_active: true
   });
   const [vendorId, setVendorId] = useState('');
 
@@ -66,7 +68,8 @@ const VendorSettings = () => {
           description: data.description || '',
           phone: (data.profiles as any)?.phone || '',
           location_lat: (data.profiles as any)?.location_lat?.toString() || '',
-          location_lng: (data.profiles as any)?.location_lng?.toString() || ''
+          location_lng: (data.profiles as any)?.location_lng?.toString() || '',
+          is_active: data.is_active !== undefined ? data.is_active : true
         });
       }
     } catch (error) {
@@ -88,19 +91,20 @@ const VendorSettings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Update vendor_profiles
+      // save vendor profile
       const { error: vendorError } = await supabase
         .from('vendor_profiles')
         .update({
           business_name: vendorData.business_name,
           category: vendorData.category,
           description: vendorData.description,
+          is_active: vendorData.is_active,
         })
         .eq('id', vendorId);
 
       if (vendorError) throw vendorError;
 
-      // Update profiles (phone and location)
+      // save phone and location
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -241,9 +245,23 @@ const VendorSettings = () => {
               />
             </div>
 
-            <div className="space-y-4 pt-4 border-t">
-              <div className="flex items-center justify-between">
-                <Label>Business Location</Label>
+            {/* Active Status Toggle */}
+            <div className="flex items-center justify-between py-4 border-t">
+              <div className="space-y-0.5">
+                <Label htmlFor="is_active">Active Status</Label>
+                <p className="text-sm text-muted-foreground">
+                  When inactive, your services won't appear in search results
+                </p>
+              </div>
+              <Switch
+                id="is_active"
+                checked={vendorData.is_active}
+                onCheckedChange={(checked) => setVendorData({ ...vendorData, is_active: checked })}
+                disabled={saving}
+              />
+            </div>
+
+            <div className="space-y-4 pt-4 border-t">\n              <div className="flex items-center justify-between">\n                <Label>Business Location</Label>
                 <Button
                   type="button"
                   variant="outline"

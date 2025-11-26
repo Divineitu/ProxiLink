@@ -50,7 +50,7 @@ const VendorDashboard = () => {
 
   const checkAuth = useCallback(async () => {
     try {
-      // Add small delay to ensure session is established
+      // wait a bit for session to be ready
       await new Promise(resolve => setTimeout(resolve, 500));
       
       const { data: { session } } = await supabase.auth.getSession();
@@ -60,16 +60,16 @@ const VendorDashboard = () => {
         return;
       }
 
-      // Check if user has vendor role
+      // make sure user is a vendor
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", session.user.id)
         .single();
 
-      // If no role found yet (timing issue), still allow access for new signups
+      // sometimes role takes time to show up for new users
       if (!roleData && !roleError) {
-        // No role data, but no error - might be a new user, wait a bit more
+        // try again after waiting
         await new Promise(resolve => setTimeout(resolve, 1000));
         const { data: roleData2 } = await supabase
           .from("user_roles")
@@ -95,7 +95,7 @@ const VendorDashboard = () => {
         return;
       }
 
-      // Fetch vendor profile
+      // get vendor profile
       const { data: profile } = await supabase
         .from("vendor_profiles")
         .select("*")

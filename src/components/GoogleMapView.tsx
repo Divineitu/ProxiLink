@@ -64,8 +64,7 @@ const GoogleMapView = ({ userLocation, radiusKm = 5 }: GoogleMapViewProps) => {
   useEffect(() => {
     if (!userLocation) return;
 
-    // TODO: Fetch real vendors from database based on user location
-    // For now, set empty array until vendor location data is populated
+    // will add vendor fetching from DB later
     setVendors([]);
   }, [userLocation, radiusKm]);
 

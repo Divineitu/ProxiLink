@@ -57,7 +57,7 @@ const Messages = () => {
     };
   }, []);
 
-  // Handle incoming vendor info from navigation state
+  // get vendor info from navigation
   useEffect(() => {
     if (location.state && location.state.vendorId && currentUserId) {
       handleCreateOrFindConversation(
@@ -103,7 +103,7 @@ const Messages = () => {
 
       if (error) throw error;
 
-      // Fetch vendor profile
+      // get vendor info
       const { data: vendorProfile } = await supabase
         .from('profiles')
         .select('id, full_name, phone')
@@ -151,7 +151,7 @@ const Messages = () => {
 
       if (error) throw error;
 
-      // Fetch other user details for each conversation
+      // get other user info for each chat
       const conversationsWithUsers = await Promise.all(
         (data || []).map(async (conv: any) => {
           const otherUserId = conv.user_id === user.id ? conv.vendor_id : conv.user_id;
@@ -230,14 +230,14 @@ const Messages = () => {
   useEffect(() => {
     const el = messagesRef.current;
     if (el) {
-      // small timeout to wait for DOM render
+      // wait for messages to load
       setTimeout(() => {
         el.scrollTop = el.scrollHeight;
       }, 50);
     }
   }, [messages]);
 
-  // Group messages by day for rendering
+  // group messages by day
   const groupMessagesByDay = (msgs: Message[]) => {
     const groups: { day: string; label: string; items: Message[] }[] = [];
     msgs.forEach((m) => {

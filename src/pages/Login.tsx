@@ -67,7 +67,7 @@ const Login = () => {
           localStorage.removeItem("userEmail");
         }
 
-        // Fetch user roles to determine redirect (user can have multiple roles)
+        // check user role for redirect
         const { data: roles } = await supabase
           .from("user_roles")
           .select("role")
@@ -75,10 +75,10 @@ const Login = () => {
 
         toast.success("Welcome back!");
         
-        // Get all roles and prioritize admin > vendor > user
+        // get roles (admin > vendor > user)
         const userRoles = roles?.map(r => r.role) || [];
         
-        // Redirect based on highest priority role
+        // send to right page based on role
         if (userRoles.includes("admin")) {
           navigate("/admin/dashboard");
         } else if (userRoles.includes("vendor")) {

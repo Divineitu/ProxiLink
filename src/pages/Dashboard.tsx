@@ -48,10 +48,10 @@ const Dashboard = () => {
   useEffect(() => {
     fetchUserData();
 
-    // Check if we should expand providers list from navigation state
+    // check if we need to expand providers list
     if (routerLocation.state?.expandProviders) {
       setShouldExpandProviders(true);
-      // Clear the state to avoid re-expanding on refresh
+      // clear state so it doesn't keep expanding
       window.history.replaceState({}, document.title);
     }
 
@@ -135,8 +135,6 @@ const Dashboard = () => {
 
       {/* Fullscreen Map */}
       <div className="w-full h-screen">
-        {/* debug: log map render to console without returning a node */}
-        {typeof window !== 'undefined' && (() => { console.log('Rendering Map container with profile location:', profile?.location_lat, profile?.location_lng); return null; })()}
         <MapWrapper 
           userLocation={profile?.location_lat && profile?.location_lng ? {
             lat: Number(profile.location_lat),

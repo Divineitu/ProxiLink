@@ -1,13 +1,12 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { findNearbyVendorsBackend } from '@/integrations/backend-maps';
+import { supabase } from '@/integrations/supabase/client';
 import demoVendors from '@/data/demoVendors';
-import demoServices from '@/data/demoServices';
-import { AlertCircle, Loader2, MapPin, Copy, Check } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { AlertCircle, Loader2, MapPin } from 'lucide-react';
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
-import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, CircleMarker } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -176,11 +175,7 @@ const Map = ({ userLocation, radiusKm = 5 }: MapProps) => {
   const [mapLoading, setMapLoading] = useState(false);
   const [useLeaflet, setUseLeaflet] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine ?? true : true);
 
-  // Log initialization
-  useEffect(() => {
-    console.log('=== MAP COMPONENT INITIALIZED (Using Backend API) ===');
-    console.log('Backend will handle all Google Maps API calls securely');
-  }, []);
+  // Map component initialized - using backend API for all Google Maps calls
 
   // Listen for online/offline to toggle Leaflet usage
   useEffect(() => {
@@ -194,32 +189,58 @@ const Map = ({ userLocation, radiusKm = 5 }: MapProps) => {
     };
   }, []);
 
-  // Debug log when useLeaflet changes
-  useEffect(() => {
-    console.log('useLeaflet state:', useLeaflet);
-  }, [useLeaflet]);
+
 
   // Use provided location or geolocation hook result
   const mapLocation = userLocation || location;
 
-  // Fetch vendors on mount
+  // get vendors from DB or demo data
   useEffect(() => {
-    const useDemoVendors = import.meta.env.VITE_USE_DEMO_VENDORS === 'true';
-    
-    if (useDemoVendors) {
-      // Convert demo vendors to proper format (demoVendors store coords under `profiles`)
-      const formattedVendors = demoVendors.map(v => {
-        const profiles = (v as unknown as { profiles?: { location_lat?: number; location_lng?: number } }).profiles;
-        return ({
-          id: v.id,
-          business_name: v.business_name,
-          lat: profiles?.location_lat,
-          lng: profiles?.location_lng,
-        } as Vendor);
-      });
-      setVendors(formattedVendors);
-      console.log('Loaded demo vendors:', formattedVendors.length);
-    }
+    const fetchVendors = async () => {
+      const useDemoVendors = import.meta.env.VITE_USE_DEMO_VENDORS === 'true';
+      
+      if (useDemoVendors) {
+        // Use demo vendors
+        const formattedVendors = demoVendors.map(v => {
+          const profiles = (v as unknown as { profiles?: { location_lat?: number; location_lng?: number } }).profiles;
+          return ({
+            id: v.id,
+            business_name: v.business_name,
+            lat: profiles?.location_lat,
+            lng: profiles?.location_lng,
+          } as Vendor);
+        });
+        setVendors(formattedVendors);
+        return;
+      }
+
+      // get from database
+      try {
+        const { data, error } = await supabase
+          .from('vendor_profiles')
+          .select('id, business_name, user_id, profiles(location_lat, location_lng)')
+          .eq('is_active', true);
+        
+        if (error) throw error;
+        
+        const formattedVendors: Vendor[] = (data || []).map(v => {
+          const profile = v.profiles as any;
+          return {
+            id: v.id,
+            business_name: v.business_name,
+            location_lat: profile?.location_lat,
+            location_lng: profile?.location_lng,
+          };
+        });
+        
+        setVendors(formattedVendors);
+      } catch (err) {
+        console.error('Error fetching vendors:', err);
+        setVendors([]);
+      }
+    };
+
+    fetchVendors();
   }, []);
 
   // Find nearby vendors using backend API when location changes
@@ -229,7 +250,6 @@ const Map = ({ userLocation, radiusKm = 5 }: MapProps) => {
     const fetchNearbyVendors = async () => {
       setMapLoading(true);
       try {
-        console.log('Calling backend API to find nearby vendors...');
         const result = await findNearbyVendorsBackend(
           { lat: mapLocation.lat, lng: mapLocation.lng },
           vendors,
@@ -237,14 +257,12 @@ const Map = ({ userLocation, radiusKm = 5 }: MapProps) => {
         );
 
         if (result) {
-          console.log(`✅ Backend found ${result.nearbyVendors.length} nearby vendors`);
           setNearbyVendors(result.nearbyVendors);
         } else {
-          console.warn('Backend returned null');
           setNearbyVendors([]);
         }
       } catch (err) {
-        console.error('Error calling backend API:', err);
+        console.error('Error finding nearby vendors:', err);
         setNearbyVendors([]);
       } finally {
         setMapLoading(false);
@@ -262,7 +280,10 @@ const Map = ({ userLocation, radiusKm = 5 }: MapProps) => {
         <AlertDescription className="flex items-center justify-between">
           <span>{error}</span>
           <button
-            onClick={requestLocation}
+            onClick={(e) => {
+              e.preventDefault();
+              requestLocation();
+            }}
             className="ml-4 px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded"
           >
             Retry
@@ -335,21 +356,9 @@ const Map = ({ userLocation, radiusKm = 5 }: MapProps) => {
                 </div>
               </div>
               <button
-                onClick={async () => {
-                  console.log('Location button clicked');
-                  try {
-                      if (navigator.permissions && navigator.permissions.query) {
-                        const p = await navigator.permissions.query({ name: 'geolocation' } as PermissionDescriptor);
-                        console.log('Geolocation permission state (before request):', p?.state);
-                      }
-                  } catch (permErr) {
-                    console.warn('Permissions API not available or failed', permErr);
-                  }
-                  try {
-                    requestLocation();
-                  } catch (e) {
-                    console.error('requestLocation threw error:', e);
-                  }
+                onClick={(e) => {
+                  e.preventDefault();
+                  requestLocation();
                 }}
                 className="w-full px-6 py-4 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-semibold transition-all hover:shadow-xl active:scale-95 flex items-center justify-center gap-2"
               >
@@ -359,7 +368,6 @@ const Map = ({ userLocation, radiusKm = 5 }: MapProps) => {
               <div className="mt-3 flex items-center gap-3">
                 <button
                   onClick={() => {
-                    console.log('Debug Geolocation button clicked');
                     if (!navigator.geolocation) {
                       alert('Geolocation API not available in this browser');
                       return;
@@ -367,11 +375,9 @@ const Map = ({ userLocation, radiusKm = 5 }: MapProps) => {
                     navigator.geolocation.getCurrentPosition(
                       (pos) => {
                         const { latitude, longitude } = pos.coords;
-                        console.log('Debug geolocation success', pos);
                         alert(`Location: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
                       },
                       (err) => {
-                        console.error('Debug geolocation error', err);
                         alert(`Geolocation error: ${err.message} (code ${err.code})`);
                       },
                       { timeout: 10000 }
@@ -402,14 +408,9 @@ const Map = ({ userLocation, radiusKm = 5 }: MapProps) => {
     );
   }
 
-  console.log('Map Component rendering with:', {
-    hasLocation: !!mapLocation,
-    vendorCount: vendors.length,
-    nearbyVendorCount: nearbyVendors.length,
-    mapLoading,
-  });
 
-  // Leaflet default icon fix (ensure markers show)
+
+  // fix for leaflet markers not showing
     try {
       const iconUrl = new URL('leaflet/dist/images/marker-icon.png', import.meta.url).href;
       const iconRetinaUrl = new URL('leaflet/dist/images/marker-icon-2x.png', import.meta.url).href;
@@ -423,12 +424,7 @@ const Map = ({ userLocation, radiusKm = 5 }: MapProps) => {
   const LeafletMap = ({ location, vendors, onTileError }: { location: { lat: number; lng: number }; vendors: Vendor[]; onTileError: () => void }) => {
     const [map, setMap] = useState<L.Map | null>(null);
 
-    useEffect(() => {
-      console.log('LeafletMap mounted');
-      return () => {
-        console.log('LeafletMap unmounted');
-      };
-    }, []);
+
 
     useEffect(() => {
       if (map && location) {
@@ -451,8 +447,9 @@ const Map = ({ userLocation, radiusKm = 5 }: MapProps) => {
         center={[location.lat, location.lng]}
         zoom={14}
         style={{ width: '100%', height: '100%' }}
-        whenCreated={(m) => setMap(m)}
+        ref={setMap as any}
         zoomControl={false}
+        {...{} as any}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

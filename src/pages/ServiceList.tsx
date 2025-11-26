@@ -1,14 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MapPin, DollarSign } from 'lucide-react';
-import { findNearbyVendors } from '@/lib/proximity';
 
 const ServiceList = () => {
   const navigate = useNavigate();
@@ -17,7 +15,7 @@ const ServiceList = () => {
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [allServices, setAllServices] = useState<ServiceItem[]>([]);
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [proximityFilter, setProximityFilter] = useState('50'); // km
+  const [proximityFilter, setProximityFilter] = useState('10'); // Default to 10km
   const [categories, setCategories] = useState<string[]>([]);
 
   useEffect(() => {
@@ -52,9 +50,17 @@ const ServiceList = () => {
       const radiusKm = parseInt(proximityFilter);
       filtered = filtered.filter((s) => {
         if (!s.location_lat || !s.location_lng) return false;
-        const distance = Math.sqrt(
-          Math.pow(s.location_lat - location.lat, 2) + Math.pow(s.location_lng - location.lng, 2)
-        ) * 111; // rough km conversion
+        
+        // Calculate distance using Haversine formula
+        const R = 6371; // Earth's radius in km
+        const dLat = (s.location_lat - location.lat) * Math.PI / 180;
+        const dLon = (s.location_lng - location.lng) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(location.lat * Math.PI / 180) * Math.cos(s.location_lat * Math.PI / 180) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = R * c;
+        
         return distance <= radiusKm;
       });
     }
@@ -94,17 +100,19 @@ const ServiceList = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="proximity-filter" className="text-sm sm:text-base">Radius (km)</Label>
-              <Input
-                id="proximity-filter"
-                type="number"
-                min="0"
-                max="200"
-                value={proximityFilter}
-                onChange={(e) => setProximityFilter(e.target.value)}
-                placeholder="50"
-                className="min-h-[44px] text-sm sm:text-base"
-              />
+              <Label htmlFor="proximity-filter" className="text-sm sm:text-base">Distance Range</Label>
+              <Select value={proximityFilter} onValueChange={setProximityFilter}>
+                <SelectTrigger id="proximity-filter" className="min-h-[44px] text-sm sm:text-base">
+                  <SelectValue placeholder="Select range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5 km</SelectItem>
+                  <SelectItem value="10">10 km</SelectItem>
+                  <SelectItem value="20">20 km</SelectItem>
+                  <SelectItem value="50">50 km</SelectItem>
+                  <SelectItem value="100">100 km</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex items-end">
@@ -112,7 +120,7 @@ const ServiceList = () => {
                 variant="outline"
                 onClick={() => {
                   setCategoryFilter('');
-                  setProximityFilter('50');
+                  setProximityFilter('10');
                 }}
                 className="w-full md:w-auto min-h-[44px] text-sm sm:text-base"
               >

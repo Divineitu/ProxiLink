@@ -152,7 +152,7 @@ const Profile = () => {
       setIsVendor(true);
       setVendorDialogOpen(false);
       
-      // Optionally redirect to vendor dashboard
+      // send to vendor dashboard after a sec
       setTimeout(() => {
         navigate('/vendor/dashboard');
       }, 1500);
