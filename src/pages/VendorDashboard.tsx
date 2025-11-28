@@ -245,11 +245,11 @@ const VendorDashboard = () => {
               onClick={() => navigate('/dashboard')}
               variant="outline"
               size="sm"
-              className="hidden sm:flex"
+              className="flex"
               title="Switch to User Dashboard"
             >
-              <Users className="h-4 w-4 mr-2" />
-              User View
+              <Users className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">User View</span>
             </Button>
             <NotificationBell />
             <div className="flex items-center gap-2 px-3 py-1 bg-muted rounded-md">

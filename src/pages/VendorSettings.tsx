@@ -8,13 +8,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Save, Store } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ArrowLeft, Save, Store, Trash2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 const VendorSettings = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [vendorData, setVendorData] = useState({
     business_name: '',
     category: '',
@@ -148,6 +151,50 @@ const VendorSettings = () => {
     }
   };
 
+  const handleDeleteVendorAccount = async () => {
+    setDeleting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Delete vendor role first
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('role', 'vendor');
+
+      if (roleError) throw roleError;
+
+      // Delete all vendor services
+      const { error: servicesError } = await supabase
+        .from('services')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (servicesError) console.warn('Error deleting services:', servicesError);
+
+      // Delete vendor profile
+      const { error: profileError } = await supabase
+        .from('vendor_profiles')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (profileError) throw profileError;
+
+      toast.success('Vendor account deleted successfully!');
+      setDeleteDialogOpen(false);
+      
+      // Redirect to regular dashboard after a short delay
+      setTimeout(() => navigate('/dashboard'), 1500);
+    } catch (error) {
+      console.error('Error deleting vendor account:', error);
+      toast.error('Failed to delete vendor account');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -261,7 +308,9 @@ const VendorSettings = () => {
               />
             </div>
 
-            <div className="space-y-4 pt-4 border-t">\n              <div className="flex items-center justify-between">\n                <Label>Business Location</Label>
+            <div className="space-y-4 pt-4 border-t">
+              <div className="flex items-center justify-between">
+                <Label>Business Location</Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -322,7 +371,95 @@ const VendorSettings = () => {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Delete Vendor Account Section */}
+        <Card className="mt-6 border-destructive">
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-lg sm:text-xl flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Delete Vendor Account
+            </CardTitle>
+            <CardDescription className="text-sm sm:text-base">
+              Permanently remove your vendor account and all associated data
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 p-4 bg-destructive/10 rounded-lg border border-destructive/20">
+                <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">This action cannot be undone</p>
+                  <p className="text-sm text-muted-foreground">
+                    Deleting your vendor account will remove your business profile, all services, and vendor role. 
+                    You can create a new vendor account later if needed.
+                  </p>
+                </div>
+              </div>
+              
+              <Button
+                variant="destructive"
+                onClick={() => setDeleteDialogOpen(true)}
+                className="w-full min-h-[44px]"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Vendor Account
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Confirm Vendor Account Deletion
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Are you absolutely sure you want to delete your vendor account? This will:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Remove your business profile</li>
+                <li>Delete all your services</li>
+                <li>Remove your vendor role</li>
+              </ul>
+              <p className="mt-3 font-medium">
+                You will be redirected to your user dashboard and can create a new vendor account anytime.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteVendorAccount}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <>
+                  <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                  </svg>
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Yes, Delete My Vendor Account
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
