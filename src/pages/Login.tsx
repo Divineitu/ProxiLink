@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { MapPin, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -97,6 +98,9 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-3 sm:p-4">
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
       <Card className="w-full max-w-md shadow-soft">
         <CardHeader className="space-y-1 text-center">
           <div className="flex items-center justify-center gap-2 mb-2">

@@ -4,6 +4,8 @@ import { calculateDistance } from '@/lib/proximity';
 import { Loader2 } from 'lucide-react';
 import AnimatedMarker from './AnimatedMarker';
 import RadarPulse from './RadarPulse';
+import { generateNearbyDemoVendors } from '@/data/demoVendors';
+import { supabase } from '@/integrations/supabase/client';
 
 const libraries: Libraries = ['places'];
 
@@ -64,8 +66,63 @@ const GoogleMapView = ({ userLocation, radiusKm = 5 }: GoogleMapViewProps) => {
   useEffect(() => {
     if (!userLocation) return;
 
-    // will add vendor fetching from DB later
-    setVendors([]);
+    const fetchVendors = async () => {
+      const useDemoVendors = import.meta.env.VITE_USE_DEMO_VENDORS === 'true';
+      
+      if (useDemoVendors) {
+        // Use demo vendors generated around user
+        const demoVendors = generateNearbyDemoVendors(userLocation.lat, userLocation.lng, 12);
+        const formattedVendors = demoVendors.map(v => ({
+          id: v.id,
+          business_name: v.business_name,
+          category: v.category,
+          lat: v.profiles?.location_lat,
+          lng: v.profiles?.location_lng,
+        })).filter(v => v.lat && v.lng) as Vendor[];
+        setVendors(formattedVendors);
+        return;
+      }
+
+      // Fetch from database
+      try {
+        const { data, error } = await supabase
+          .from('vendor_profiles')
+          .select('id, business_name, category, profiles(location_lat, location_lng)')
+          .eq('is_active', true);
+        
+        if (error) throw error;
+        
+        const formattedVendors: Vendor[] = (data || []).map(v => {
+          const profile = v.profiles as any;
+          return {
+            id: v.id,
+            business_name: v.business_name,
+            category: v.category,
+            lat: profile?.location_lat,
+            lng: profile?.location_lng,
+          };
+        }).filter(v => v.lat && v.lng) as Vendor[];
+        
+        // Filter by radius
+        const nearby = formattedVendors.filter(v => {
+          if (!v.lat || !v.lng) return false;
+          const distance = calculateDistance(
+            userLocation.lat,
+            userLocation.lng,
+            v.lat,
+            v.lng
+          );
+          return distance <= radiusKm;
+        });
+        
+        setVendors(nearby);
+      } catch (err) {
+        console.error('Error fetching vendors:', err);
+        setVendors([]);
+      }
+    };
+
+    fetchVendors();
   }, [userLocation, radiusKm]);
 
   if (loadError) {

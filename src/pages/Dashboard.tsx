@@ -5,6 +5,7 @@ import MapWrapper from "@/components/MapWrapper";
 import NotificationBell from '@/components/NotificationBell';
 import Sidebar from '@/components/Sidebar';
 import ServiceProviderList from "@/components/ServiceProviderList";
+import RadiusSlider from "@/components/RadiusSlider";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { MapPin, Bell } from "lucide-react";
@@ -26,6 +27,7 @@ const Dashboard = () => {
   const [showProximityAlert, setShowProximityAlert] = useState(false);
   const [nearbyProvider, setNearbyProvider] = useState<ServiceItem | null>(null);
   const [shouldExpandProviders, setShouldExpandProviders] = useState(false);
+  const [radiusKm, setRadiusKm] = useState(0.01); // Default 10 meters
 
   const fetchUserData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -139,8 +141,14 @@ const Dashboard = () => {
           userLocation={profile?.location_lat && profile?.location_lng ? {
             lat: Number(profile.location_lat),
             lng: Number(profile.location_lng)
-          } : undefined} 
+          } : undefined}
+          radiusKm={radiusKm}
         />
+      </div>
+
+      {/* Radius Slider - Top Right */}
+      <div className="fixed top-20 right-4 z-40 w-56">
+        <RadiusSlider value={radiusKm} onChange={setRadiusKm} />
       </div>
 
       {/* (Old fixed header removed; notification and profile moved to overlay header) */}

@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ArrowLeft, Save, Camera, Mail, Phone, MapPin, User, Briefcase, Store } from 'lucide-react';
 import { toast } from 'sonner';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -442,6 +443,10 @@ const Profile = () => {
             <CardTitle className="text-lg sm:text-xl">Account Settings</CardTitle>
           </CardHeader>
           <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-3">
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <span className="text-sm sm:text-base font-medium">Theme</span>
+              <ThemeToggle />
+            </div>
             <Button 
               variant="outline" 
               className="w-full min-h-[44px] justify-start text-sm sm:text-base"

@@ -234,16 +234,13 @@ const VendorDashboard = () => {
               User View
             </Button>
             <NotificationBell />
-            <Button
-              onClick={() => subscribed ? unsubscribeFromPushNotifications() : subscribeToPushNotifications()}
-              disabled={pushLoading}
-              variant={subscribed ? "default" : "outline"}
-              size="sm"
-              className="hidden sm:flex"
-              title={subscribed ? "Disable push notifications" : "Enable push notifications"}
-            >
-              {pushLoading ? "..." : (subscribed ? "🔔 On" : "🔕 Off")}
-            </Button>
+            <div className="flex items-center gap-2 px-3 py-1 bg-muted rounded-md">
+              <span className="text-sm font-medium hidden sm:inline">Status:</span>
+              <Badge variant={vendorProfile?.is_active ? "default" : "secondary"} className="gap-1">
+                <div className={`w-2 h-2 rounded-full ${vendorProfile?.is_active ? 'bg-green-500' : 'bg-gray-400'}`} />
+                {vendorProfile?.is_active ? 'Active' : 'Inactive'}
+              </Badge>
+            </div>
             <Button variant="outline" onClick={handleSignOut} size="sm" className="hidden sm:flex">
               <LogOut className="h-4 w-4 mr-2" />
               Sign Out

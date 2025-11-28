@@ -142,16 +142,10 @@ const Sidebar: React.FC = () => {
           </Link>
 
           {isVendor && (
-            <>
-              <Link to="/dashboard" className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded text-sm">
-                <User className="h-5 w-5 shrink-0" />
-                <span>User Dashboard</span>
-              </Link>
-              <Link to="/vendor/dashboard" className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded text-sm">
-                <Store className="h-5 w-5 shrink-0" />
-                <span>Vendor Dashboard</span>
-              </Link>
-            </>
+            <Link to="/vendor/dashboard" className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded text-sm">
+              <Store className="h-5 w-5 shrink-0" />
+              <span>Vendor Dashboard</span>
+            </Link>
           )}
 
           {!isVendor && (
