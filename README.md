@@ -426,28 +426,12 @@ We welcome contributions! Please follow these steps:
 4. Push to the branch: `git push origin feature/amazing-feature`
 5. Open a Pull Request
 
----
-
-## 📝 License
-
-This project is licensed under the MIT License.
-
----
 
 ## 📧 Support
 
-- **Email**: support@proxilink.com
+- **Email**: divineokonitu01@gmail.com
 - **GitHub Issues**: [Create an issue](https://github.com/DiviTech01/ProxiLink/issues)
 - **Documentation**: See `DOCUMENTATION_INDEX.md` for detailed guides
-
----
-
-## 🙏 Acknowledgments
-
-- Built with [Lovable](https://lovable.dev)
-- UI components from [shadcn/ui](https://ui.shadcn.com)
-- Maps powered by [Leaflet](https://leafletjs.com) and [OpenStreetMap](https://www.openstreetmap.org)
-- Backend by [Supabase](https://supabase.com)
 
 ---
 
